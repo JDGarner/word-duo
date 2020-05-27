@@ -1,0 +1,16 @@
+Word Duo:
+  Main Menu:
+    - Simple Play button
+  Difficulties?
+    - Could increase difficulty only if user gets X right in a row
+    - Goes back to start if they get one wrong
+  Scores:
+    - Based on how many you got correct in a row
+  Game:
+    - Words arrange in circle
+    - Have to link the synonym pairs
+    - On link -> pairs disappear
+  Theme:
+    White background or very gentle gradient?
+    Words in coloured bubbles
+    Relaxing? Ambient music/pleasant sound effects?
