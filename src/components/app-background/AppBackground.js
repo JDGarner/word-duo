@@ -1,10 +1,27 @@
 import React from "react";
-import { SafeAreaView } from "react-native";
+import { SafeAreaView, View } from "react-native";
+import styled from "styled-components";
+// import LinearGradient from "react-native-linear-gradient";
 
-// const appColors = ["#2ea7d7", "#b242f1", "#F89221", "#2ac6b2", "#870acb"];
+// #f4efe6
+
+const Background = styled(View)`
+  flex: 1;
+  background-color: #f2efe8;
+`;
 
 const AppBackground = ({ children }) => {
-  return <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>;
+  return (
+    <Background>
+      <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>
+    </Background>
+  );
+
+  // return (
+  //   <LinearGradient colors={["#fffbf7", "#ffe9e9"]} style={{ flex: 1 }}>
+  //     <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>
+  //   </LinearGradient>
+  // );
 };
 
 export default AppBackground;

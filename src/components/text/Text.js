@@ -6,9 +6,9 @@ export const TEXT_TOP_PADDING = Platform.OS === "ios" ? 3 : 0;
 
 const decorateText = type => styled.Text`
   font-size: ${props => props.fontSize || props.theme[type].fontSize};
-  font-weight: ${props => props.theme[type].fontWeight};
+  font-weight: ${props => props.fontWeight || props.theme[type].fontWeight};
   color: ${props => props.color || props.theme.textColor};
-  text-align: ${props => props.textAlign || "left"};
+  text-align: ${props => props.textAlign || "center"};
   font-family: ${FONT_FAMILY};
 `;
 
