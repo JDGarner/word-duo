@@ -8,9 +8,9 @@ import synonyms from "../../mock-data/synonyms";
 const shuffled = shuffle(synonyms);
 
 export default function AppScreens({ currentScreen }) {
-  if (currentScreen === SCREENS.GAME) {
-    return <Game words={shuffled} />;
-  }
+  // if (currentScreen === SCREENS.GAME) {
+  return <Game words={shuffled} />;
+  // }
 
-  return <ConnectedMainMenu />;
+  // return <ConnectedMainMenu />;
 }
