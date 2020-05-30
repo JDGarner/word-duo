@@ -17,3 +17,16 @@ export const containerColors = [
   "rgba(56,144,143,1)",
   "rgba(188,133,163,1)",
 ];
+
+export const toRadians = deg => deg * (Math.PI / 180);
+
+export const getCircleCoordinatesForAngle = (angle, radius) => {
+  const opposite = radius * Math.sin(toRadians(angle / 2));
+  const hypotenuseJ = opposite * 2;
+  const angleB = (180 - angle) / 2;
+  const angleC = 90 - angleB;
+  return {
+    xCoord: hypotenuseJ * Math.cos(toRadians(angleC)),
+    yCoord: hypotenuseJ * Math.sin(toRadians(angleC)),
+  };
+};

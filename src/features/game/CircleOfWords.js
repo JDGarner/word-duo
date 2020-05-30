@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, TouchableWithoutFeedback } from "react-native";
+import { View } from "react-native";
 import { capitalize, cloneDeep } from "lodash";
 import styled from "styled-components";
 import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import { screenWidth } from "../../utils/sizing-utils";
-import { containerColors } from "./game-utils";
-// import { State, PanGestureHandler } from "react-native-gesture-handler";
+import { containerColors, getCircleCoordinatesForAngle } from "./game-utils";
+import { State, PanGestureHandler } from "react-native-gesture-handler";
+import { Svg, Line } from "react-native-svg";
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -41,18 +42,20 @@ const WordText = styled(MediumLargeText)`
   padding-bottom: 5;
 `;
 
-const PositionAbsoluteWord = ({ onPress, onLayout, word }) => {
+const SvgContainer = styled(View)`
+  position: absolute;
+`;
+
+const PositionAbsoluteWord = ({ onPanGestureEvent, onHandlerStateChange, onLayout, word }) => {
   return (
     <WordContainer
       onLayout={e => onLayout(e, word)}
       x={word.x || 0}
       y={word.y || 0}
       color={word.color}>
-      <TouchableWithoutFeedback onPress={() => onPress(word)}>
-        <WordText fontWeight="600" color={colors.wordColor}>
-          {capitalize(word.text)}
-        </WordText>
-      </TouchableWithoutFeedback>
+      <WordText fontWeight="600" color={colors.wordColor}>
+        {capitalize(word.text)}
+      </WordText>
     </WordContainer>
   );
 };
@@ -67,30 +70,31 @@ const getInitialWordState = words => {
       height: null,
       x: null,
       y: null,
-      angle: i * (360 / words.length),
+      centerX: null,
+      centerY: null,
+      angle: 45,
     };
   });
-};
-
-const toRadians = deg => deg * (Math.PI / 180);
-
-const getCircleCoordinatesForAngle = (angle, radius) => {
-  const opposite = radius * Math.sin(toRadians(angle / 2));
-  const hypotenuseJ = opposite * 2;
-  const angleB = (180 - angle) / 2;
-  const angleC = 90 - angleB;
-  return {
-    xCoord: hypotenuseJ * Math.cos(toRadians(angleC)),
-    yCoord: hypotenuseJ * Math.sin(toRadians(angleC)),
-  };
 };
 
 const CircleOfWords = ({ words }) => {
   const [wordState, setWordState] = useState(getInitialWordState(words));
   const [positionsSet, setPositionsSet] = useState(false);
 
-  const onPressWord = word => {
-    console.log(">>> word: ", word);
+  const onPanGestureEvent = event => {
+    // console.log(">>> event: ", event);
+  };
+
+  const onHandlerStateChange = event => {
+    console.log(">>> onHandlerStateChange event: ", event);
+    // if (event.nativeEvent.oldState === State.ACTIVE) {
+    //   this._lastOffset.x += event.nativeEvent.translationX;
+    //   this._lastOffset.y += event.nativeEvent.translationY;
+    //   this._translateX.setOffset(this._lastOffset.x);
+    //   this._translateX.setValue(0);
+    //   this._translateY.setOffset(this._lastOffset.y);
+    //   this._translateY.setValue(0);
+    // }
   };
 
   const onWordLayout = (event, word) => {
@@ -112,7 +116,13 @@ const CircleOfWords = ({ words }) => {
         const halfHeight = w.height / 2;
         const startingX = RADIUS - halfWidth;
         const startingY = -1 * halfHeight;
-        clonedWordState[i] = { ...w, x: startingX + xCoord, y: startingY + yCoord };
+        clonedWordState[i] = {
+          ...w,
+          centerX: xCoord + RADIUS,
+          centerY: yCoord,
+          x: startingX + xCoord,
+          y: startingY + yCoord,
+        };
       });
       setWordState(clonedWordState);
     }
@@ -121,8 +131,25 @@ const CircleOfWords = ({ words }) => {
   return (
     <ContentContainer>
       <Circle>
-        {wordState.map((w, i) => (
-          <PositionAbsoluteWord onLayout={onWordLayout} onPress={onPressWord} word={w} />
+        <SvgContainer>
+          <Svg height="500" width="500">
+            <Line
+              x1={wordState[0].centerX}
+              y1={wordState[0].centerY}
+              x2={wordState[0].centerX}
+              y2={wordState[0].centerY + 100}
+              stroke="red"
+              strokeWidth="2"
+            />
+          </Svg>
+        </SvgContainer>
+        {wordState.map(w => (
+          <PositionAbsoluteWord
+            onLayout={onWordLayout}
+            onPanGestureEvent={onPanGestureEvent}
+            onHandlerStateChange={onHandlerStateChange}
+            word={w}
+          />
         ))}
       </Circle>
     </ContentContainer>
