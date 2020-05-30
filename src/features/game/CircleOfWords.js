@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, Animated } from "react-native";
 import { capitalize, cloneDeep } from "lodash";
 import styled from "styled-components";
 import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
@@ -17,11 +17,12 @@ const ContentContainer = styled(View)`
   padding: 5%;
 `;
 
-const RADIUS = (screenWidth - 120) / 2;
+const DIAMETER = screenWidth - 120;
+const RADIUS = DIAMETER / 2;
 
 const Circle = styled(View)`
-  height: ${RADIUS * 2};
-  width: ${RADIUS * 2};
+  height: ${DIAMETER};
+  width: ${DIAMETER};
   border-width: 1;
   border-color: red;
   position: relative;
@@ -45,6 +46,8 @@ const WordText = styled(MediumLargeText)`
 const SvgContainer = styled(View)`
   position: absolute;
 `;
+
+const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 const PositionAbsoluteWord = ({ onPanGestureEvent, onHandlerStateChange, onLayout, word }) => {
   return (
@@ -72,7 +75,7 @@ const getInitialWordState = words => {
       y: null,
       centerX: null,
       centerY: null,
-      angle: 45,
+      angle: i * (360 / words.length),
     };
   });
 };
@@ -80,6 +83,7 @@ const getInitialWordState = words => {
 const CircleOfWords = ({ words }) => {
   const [wordState, setWordState] = useState(getInitialWordState(words));
   const [positionsSet, setPositionsSet] = useState(false);
+  const [y2Offset] = useState(new Animated.Value(0));
 
   const onPanGestureEvent = event => {
     // console.log(">>> event: ", event);
@@ -125,19 +129,30 @@ const CircleOfWords = ({ words }) => {
         };
       });
       setWordState(clonedWordState);
+
+      y2Offset.setValue(clonedWordState[1].centerY);
+      animate();
     }
   }, [wordState]);
+
+  const animate = () => {
+    Animated.timing(y2Offset, {
+      toValue: 300,
+      duration: 4000,
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
     <ContentContainer>
       <Circle>
         <SvgContainer>
-          <Svg height="500" width="500">
-            <Line
-              x1={wordState[0].centerX}
-              y1={wordState[0].centerY}
-              x2={wordState[0].centerX}
-              y2={wordState[0].centerY + 100}
+          <Svg height={DIAMETER} width={DIAMETER}>
+            <AnimatedLine
+              x1={wordState[1].centerX}
+              x2={wordState[1].centerX}
+              y1={wordState[1].centerY}
+              y2={y2Offset}
               stroke="red"
               strokeWidth="2"
             />
