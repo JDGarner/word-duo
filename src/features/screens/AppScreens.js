@@ -9,7 +9,7 @@ const shuffled = shuffle(synonyms);
 
 export default function AppScreens({ currentScreen }) {
   // if (currentScreen === SCREENS.GAME) {
-  return <Game words={shuffled} />;
+  return <Game words={shuffled.slice(0, 8)} />;
   // }
 
   // return <ConnectedMainMenu />;

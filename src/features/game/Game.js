@@ -2,7 +2,7 @@ import React from "react";
 import { View } from "react-native";
 import styled from "styled-components";
 import { MediumText } from "../../components/text/Text";
-import FourWords from "./FourWords";
+import CircleOfWords from "./CircleOfWords";
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -14,7 +14,7 @@ const ContentContainer = styled(View)`
 const Game = ({ words }) => {
   return (
     <ContentContainer>
-      <FourWords words={words} />
+      <CircleOfWords words={words} />
     </ContentContainer>
   );
 };
