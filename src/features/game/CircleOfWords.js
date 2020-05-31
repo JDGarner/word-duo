@@ -46,8 +46,6 @@ const SvgContainer = styled(View)`
   top: 0;
   left: 0;
   position: absolute;
-  border-color: blue;
-  border-width: 1;
 `;
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
@@ -59,7 +57,9 @@ const PositionAbsoluteWord = ({ onGestureEvent, onHandlerStateChange, onLayout, 
       x={word.x || 0}
       y={word.y || 0}
       color={word.color}>
-      <PanGestureHandler onGestureEvent={onGestureEvent}>
+      <PanGestureHandler
+        onGestureEvent={onGestureEvent}
+        onHandlerStateChange={onHandlerStateChange}>
         <Animated.View>
           <WordText fontWeight="600" color={colors.wordColor}>
             {capitalize(word.text)}
@@ -100,15 +100,13 @@ const CircleOfWords = ({ words }) => {
   );
 
   const onHandlerStateChange = event => {
-    console.log(">>> onHandlerStateChange event: ", event);
-    // if (event.nativeEvent.oldState === State.ACTIVE) {
-    //   this._lastOffset.x += event.nativeEvent.translationX;
-    //   this._lastOffset.y += event.nativeEvent.translationY;
-    //   this._translateX.setOffset(this._lastOffset.x);
-    //   this._translateX.setValue(0);
-    //   this._translateY.setOffset(this._lastOffset.y);
-    //   this._translateY.setValue(0);
-    // }
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      x2Offset.setValue(0);
+      y2Offset.setValue(0);
+
+      // const lastOffsetX += event.nativeEvent.translationX;
+      // const lastOffsetY += event.nativeEvent.translationY;
+    }
   };
 
   const onCircleLayout = event => {
@@ -144,10 +142,10 @@ const CircleOfWords = ({ words }) => {
         };
       });
       setWordState(clonedWordState);
-
-      x2Offset.setOffset(circlePosition.x + clonedWordState[1].centerX);
-      y2Offset.setOffset(circlePosition.y + clonedWordState[1].centerY);
     }
+
+    x2Offset.setOffset(circlePosition.x + wordState[1].centerX);
+    y2Offset.setOffset(circlePosition.y + wordState[1].centerY);
   }, [circlePosition, wordState]);
 
   return (
