@@ -12,6 +12,8 @@ import { containerColors, getCircleCoordinatesForAngle } from "./game-utils";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
+Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
+
 const { set, cond, block, eq, add, Value } = Animated;
 
 const ContentContainer = styled(View)`
@@ -78,6 +80,11 @@ export default class CircleOfWords extends Component {
     this.offsetX = new Value(0);
     this.offsetY = new Value(0);
 
+    this.lineEndsX = this.props.words.map(w => new Value(0));
+    this.lineEndsY = this.props.words.map(w => new Value(0));
+    this.offsetsX = this.props.words.map(w => new Value(0));
+    this.offsetsY = this.props.words.map(w => new Value(0));
+
     this.state = {
       wordState: getInitialWordState(this.props.words),
       circlePositionX: null,
@@ -85,21 +92,25 @@ export default class CircleOfWords extends Component {
       allPositionsSet: false,
     };
 
-    this.handlePan = Animated.event([
+    this.panHandlers = this.props.words.map((w, i) => this.getEventHandlerForWord(i));
+  }
+
+  getEventHandlerForWord = index => {
+    return Animated.event([
       {
-        nativeEvent: ({ translationX: x, translationY: y, state }) => {
+        nativeEvent: event => {
           return block([
-            set(this.lineEndX, add(x, this.offsetX)),
-            set(this.lineEndY, add(y, this.offsetY)),
-            cond(eq(state, State.END), [
-              set(this.lineEndX, this.offsetX),
-              set(this.lineEndY, this.offsetY),
+            set(this.lineEndsX[index], add(event.translationX, this.offsetsX[index])),
+            set(this.lineEndsY[index], add(event.translationY, this.offsetsY[index])),
+            cond(eq(event.state, State.END), [
+              set(this.lineEndsX[index], this.offsetsX[index]),
+              set(this.lineEndsY[index], this.offsetsY[index]),
             ]),
           ]);
         },
       },
     ]);
-  }
+  };
 
   onCircleLayout = event => {
     const { x, y } = event.nativeEvent.layout;
@@ -139,8 +150,10 @@ export default class CircleOfWords extends Component {
       this.setState({ wordState: clonedWordState });
     }
 
-    this.offsetX.setValue(circlePositionX + wordState[1].centerX);
-    this.offsetY.setValue(circlePositionY + wordState[1].centerY);
+    wordState.forEach((w, i) => {
+      this.offsetsX[i].setValue(circlePositionX + w.centerX);
+      this.offsetsY[i].setValue(circlePositionY + w.centerY);
+    });
   };
 
   render() {
@@ -150,18 +163,20 @@ export default class CircleOfWords extends Component {
       <ContentContainer>
         <SvgContainer>
           <Svg height={screenHeight} width={screenWidth}>
-            <AnimatedLine
-              x1={circlePositionX + wordState[1].centerX}
-              x2={this.lineEndX}
-              y1={circlePositionY + wordState[1].centerY}
-              y2={this.lineEndY}
-              stroke="red"
-              strokeWidth="2"
-            />
+            {wordState.map(w => (
+              <AnimatedLine
+                x1={circlePositionX + w.centerX}
+                x2={this.lineEndsX[w.index]}
+                y1={circlePositionY + w.centerY}
+                y2={this.lineEndsY[w.index]}
+                stroke={w.color}
+                strokeWidth="7"
+              />
+            ))}
           </Svg>
         </SvgContainer>
         <Circle onLayout={this.onCircleLayout}>
-          {this.state.wordState.map(w => (
+          {wordState.map(w => (
             <WordContainer
               onLayout={e => this.onWordLayout(e, w)}
               x={w.x || 0}
@@ -169,8 +184,8 @@ export default class CircleOfWords extends Component {
               color={w.color}>
               <PanGestureHandler
                 minDist={2}
-                onGestureEvent={this.handlePan}
-                onHandlerStateChange={this.handlePan}>
+                onGestureEvent={this.panHandlers[w.index]}
+                onHandlerStateChange={this.panHandlers[w.index]}>
                 <Animated.View>
                   <WordText fontWeight="600" color={colors.wordColor}>
                     {capitalize(w.text)}
