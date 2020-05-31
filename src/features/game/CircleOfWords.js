@@ -4,7 +4,7 @@ import { capitalize, cloneDeep } from "lodash";
 import styled from "styled-components";
 import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
-import { screenWidth } from "../../utils/sizing-utils";
+import { screenWidth, screenHeight } from "../../utils/sizing-utils";
 import { containerColors, getCircleCoordinatesForAngle } from "./game-utils";
 import { State, PanGestureHandler } from "react-native-gesture-handler";
 import { Svg, Line } from "react-native-svg";
@@ -14,7 +14,6 @@ const ContentContainer = styled(View)`
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 5%;
 `;
 
 const DIAMETER = screenWidth - 120;
@@ -44,21 +43,29 @@ const WordText = styled(MediumLargeText)`
 `;
 
 const SvgContainer = styled(View)`
+  top: 0;
+  left: 0;
   position: absolute;
+  border-color: blue;
+  border-width: 1;
 `;
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
-const PositionAbsoluteWord = ({ onPanGestureEvent, onHandlerStateChange, onLayout, word }) => {
+const PositionAbsoluteWord = ({ onGestureEvent, onHandlerStateChange, onLayout, word }) => {
   return (
     <WordContainer
       onLayout={e => onLayout(e, word)}
       x={word.x || 0}
       y={word.y || 0}
       color={word.color}>
-      <WordText fontWeight="600" color={colors.wordColor}>
-        {capitalize(word.text)}
-      </WordText>
+      <PanGestureHandler onGestureEvent={onGestureEvent}>
+        <Animated.View>
+          <WordText fontWeight="600" color={colors.wordColor}>
+            {capitalize(word.text)}
+          </WordText>
+        </Animated.View>
+      </PanGestureHandler>
     </WordContainer>
   );
 };
@@ -82,12 +89,15 @@ const getInitialWordState = words => {
 
 const CircleOfWords = ({ words }) => {
   const [wordState, setWordState] = useState(getInitialWordState(words));
+  const [circlePosition, setCirclePosition] = useState({ x: null, y: null });
   const [positionsSet, setPositionsSet] = useState(false);
+  const [x2Offset] = useState(new Animated.Value(0));
   const [y2Offset] = useState(new Animated.Value(0));
 
-  const onPanGestureEvent = event => {
-    // console.log(">>> event: ", event);
-  };
+  const handleGesture = Animated.event(
+    [{ nativeEvent: { translationX: x2Offset, translationY: y2Offset } }],
+    { useNativeDriver: true },
+  );
 
   const onHandlerStateChange = event => {
     console.log(">>> onHandlerStateChange event: ", event);
@@ -101,6 +111,11 @@ const CircleOfWords = ({ words }) => {
     // }
   };
 
+  const onCircleLayout = event => {
+    const { x, y } = event.nativeEvent.layout;
+    setCirclePosition({ x, y });
+  };
+
   const onWordLayout = (event, word) => {
     const { width, height } = event.nativeEvent.layout;
 
@@ -110,7 +125,7 @@ const CircleOfWords = ({ words }) => {
   };
 
   useEffect(() => {
-    if (!positionsSet && wordState.every(w => w.width)) {
+    if (!positionsSet && wordState.every(w => w.width) && circlePosition.x && circlePosition.y) {
       setPositionsSet(true);
 
       const clonedWordState = cloneDeep(wordState);
@@ -130,38 +145,30 @@ const CircleOfWords = ({ words }) => {
       });
       setWordState(clonedWordState);
 
-      y2Offset.setValue(clonedWordState[1].centerY);
-      animate();
+      x2Offset.setOffset(circlePosition.x + clonedWordState[1].centerX);
+      y2Offset.setOffset(circlePosition.y + clonedWordState[1].centerY);
     }
-  }, [wordState]);
-
-  const animate = () => {
-    Animated.timing(y2Offset, {
-      toValue: 300,
-      duration: 4000,
-      useNativeDriver: true,
-    }).start();
-  };
+  }, [circlePosition, wordState]);
 
   return (
     <ContentContainer>
-      <Circle>
-        <SvgContainer>
-          <Svg height={DIAMETER} width={DIAMETER}>
-            <AnimatedLine
-              x1={wordState[1].centerX}
-              x2={wordState[1].centerX}
-              y1={wordState[1].centerY}
-              y2={y2Offset}
-              stroke="red"
-              strokeWidth="2"
-            />
-          </Svg>
-        </SvgContainer>
+      <SvgContainer>
+        <Svg height={screenHeight} width={screenWidth}>
+          <AnimatedLine
+            x1={circlePosition.x + wordState[1].centerX}
+            x2={x2Offset}
+            y1={circlePosition.y + wordState[1].centerY}
+            y2={y2Offset}
+            stroke="red"
+            strokeWidth="2"
+          />
+        </Svg>
+      </SvgContainer>
+      <Circle onLayout={onCircleLayout}>
         {wordState.map(w => (
           <PositionAbsoluteWord
             onLayout={onWordLayout}
-            onPanGestureEvent={onPanGestureEvent}
+            onGestureEvent={handleGesture}
             onHandlerStateChange={onHandlerStateChange}
             word={w}
           />

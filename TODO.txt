@@ -1,3 +1,12 @@
+
+
+
+- Get SVG line to move based on gesture event
+- Add in reanimated
+
+
+
+
 Word Duo:
   Main Menu:
     - Simple Play button
