@@ -8,8 +8,15 @@ import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
 import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
-import { containerColors, getCircleCoordinatesForAngle, pointInsideBounds } from "./game-utils";
+import {
+  containerColors,
+  getCircleCoordinatesForAngle,
+  pointInsideBounds,
+  pointOutsideBounds,
+  pointInsideAnyBounds,
+} from "./game-utils";
 import { getStatusBarHeight } from "react-native-status-bar-height";
+import { BUFFER_AMOUNT } from "./game-constants";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
@@ -86,7 +93,6 @@ export default class CircleOfWords extends Component {
       y1: new Value(0),
       y2: new Value(0),
     }));
-    this.bufferAmount = new Value(15);
 
     this.state = {
       wordState: getInitialWordState(this.props.words),
@@ -98,6 +104,46 @@ export default class CircleOfWords extends Component {
     this.panHandlers = this.props.words.map((w, i) => this.getEventHandlerForWord(i));
   }
 
+  getInsideWordBoundsConditions = (index, absoluteX, absoluteY) => {
+    return this.wordDimensions.map(wd => {
+      return cond(eq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true), [
+        set(this.lineEnds[index].x, wd.centreX),
+        set(this.lineEnds[index].y, wd.centreY),
+      ]);
+    });
+  };
+
+  // getOutsideWordBoundsConditions = (index, absoluteX, absoluteY, state) => {
+  //   return this.wordDimensions.map(wd => {
+  //     return cond(
+  //       and(
+  //         eq(state, State.END),
+  //         neq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
+  //       ),
+  //       [
+  //         set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
+  //         set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
+  //       ],
+  //     );
+  //   });
+  // };
+
+  getOutsideWordBoundsCondition = (index, absoluteX, absoluteY, state) => {
+    return cond(
+      and(
+        eq(state, State.END),
+        neq(
+          pointInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated),
+          true,
+        ),
+      ),
+      [
+        set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
+        set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
+      ],
+    );
+  };
+
   getEventHandlerForWord = index => {
     return Animated.event([
       {
@@ -105,39 +151,9 @@ export default class CircleOfWords extends Component {
           return block([
             set(this.lineEnds[index].x, add(translationX, this.wordDimensions[index].centreX)),
             set(this.lineEnds[index].y, add(translationY, this.wordDimensions[index].centreY)),
-            cond(
-              eq(
-                pointInsideBounds(
-                  { x: absoluteX, y: absoluteY },
-                  this.wordDimensions[0],
-                  this.bufferAmount,
-                  Animated,
-                ),
-                true,
-              ),
-              [
-                set(this.lineEnds[index].x, this.wordDimensions[0].centreX),
-                set(this.lineEnds[index].y, this.wordDimensions[0].centreY),
-              ],
-            ),
-            cond(
-              and(
-                eq(state, State.END),
-                neq(
-                  pointInsideBounds(
-                    { x: absoluteX, y: absoluteY },
-                    this.wordDimensions[0],
-                    this.bufferAmount,
-                    Animated,
-                  ),
-                  true,
-                ),
-              ),
-              [
-                set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
-                set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
-              ],
-            ),
+            [...this.getInsideWordBoundsConditions(index, absoluteX, absoluteY)],
+            // [...this.getOutsideWordBoundsConditions(index, absoluteX, absoluteY, state)],
+            this.getOutsideWordBoundsCondition(index, absoluteX, absoluteY, state),
           ]);
         },
       },
@@ -185,10 +201,12 @@ export default class CircleOfWords extends Component {
     wordState.forEach((w, i) => {
       this.wordDimensions[i].centreX.setValue(circlePositionX + w.centerX);
       this.wordDimensions[i].centreY.setValue(circlePositionY + w.centerY);
-      this.wordDimensions[i].x1.setValue(circlePositionX + w.x);
-      this.wordDimensions[i].x2.setValue(circlePositionX + w.x + w.width);
-      this.wordDimensions[i].y1.setValue(circlePositionY + w.y + TOP_BAR_HEIGHT);
-      this.wordDimensions[i].y2.setValue(circlePositionY + w.y + w.height + TOP_BAR_HEIGHT);
+      this.wordDimensions[i].x1.setValue(circlePositionX + w.x - BUFFER_AMOUNT);
+      this.wordDimensions[i].x2.setValue(circlePositionX + w.x + w.width + BUFFER_AMOUNT);
+      this.wordDimensions[i].y1.setValue(circlePositionY + w.y + TOP_BAR_HEIGHT - BUFFER_AMOUNT);
+      this.wordDimensions[i].y2.setValue(
+        circlePositionY + w.y + w.height + TOP_BAR_HEIGHT + BUFFER_AMOUNT,
+      );
     });
   };
 
