@@ -12,7 +12,7 @@ import {
   containerColors,
   getCircleCoordinatesForAngle,
   pointInsideBounds,
-  pointInsideAnyBounds,
+  pointNotInsideAnyBounds,
   getAbsoluteCoordinatesWithBuffer,
 } from "./game-utils";
 
@@ -20,7 +20,7 @@ const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 
-const { set, cond, block, eq, add, and, not, Value } = Animated;
+const { set, cond, block, eq, add, and, Value } = Animated;
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -116,7 +116,7 @@ export default class CircleOfWords extends Component {
     return cond(
       and(
         eq(state, State.END),
-        not(pointInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated)),
+        pointNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated),
       ),
       [
         set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
