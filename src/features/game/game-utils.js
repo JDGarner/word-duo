@@ -1,3 +1,8 @@
+import { getStatusBarHeight } from "react-native-status-bar-height";
+import { BUFFER_AMOUNT } from "./game-constants";
+
+const TOP_BAR_HEIGHT = getStatusBarHeight();
+
 const getRGB = color => color.match(/([0-9]+),/g).map(c => Number(c.substring(0, c.length - 1)));
 
 const getMiddleColor = (color1, color2) => {
@@ -31,6 +36,17 @@ export const getCircleCoordinatesForAngle = (angle, radius) => {
   };
 };
 
+export const getAbsoluteCoordinatesWithBuffer = (initialOffset, box) => {
+  return {
+    centreX: initialOffset.x + box.centreX,
+    centreY: initialOffset.y + box.centreY,
+    x1: initialOffset.x + box.x - BUFFER_AMOUNT,
+    x2: initialOffset.x + box.x + box.width + BUFFER_AMOUNT,
+    y1: initialOffset.y + box.y + TOP_BAR_HEIGHT - BUFFER_AMOUNT,
+    y2: initialOffset.y + box.y + box.height + TOP_BAR_HEIGHT + BUFFER_AMOUNT,
+  };
+};
+
 // If adding buffer here
 // export const pointInsideBounds = (
 //   { x, y },
@@ -54,11 +70,11 @@ export const pointInsideBounds = ({ x, y }, { x1, y1, x2, y2 }, { and, lessThan,
 };
 
 export const pointInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
-  return (
-    pointInsideBounds({ x, y }, allBounds[0], Animated) ||
-    pointInsideBounds({ x, y }, allBounds[1], Animated)
-  );
-  // return allBounds.some(b => pointInsideBounds({ x, y }, b, Animated));
+  return Animated.or.apply(null, allBounds.map(b => pointInsideBounds({ x, y }, b, Animated)));
+};
+
+export const pointNotInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
+  return Animated.not(pointInsideAnyBounds({ x, y }, allBounds, Animated));
 };
 
 export const pointOutsideBounds = ({ x, y }, allBounds, Animated) => {

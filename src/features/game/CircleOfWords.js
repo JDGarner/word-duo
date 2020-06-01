@@ -12,18 +12,15 @@ import {
   containerColors,
   getCircleCoordinatesForAngle,
   pointInsideBounds,
-  pointOutsideBounds,
   pointInsideAnyBounds,
+  getAbsoluteCoordinatesWithBuffer,
 } from "./game-utils";
-import { getStatusBarHeight } from "react-native-status-bar-height";
-import { BUFFER_AMOUNT } from "./game-constants";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 
-const { set, cond, block, eq, neq, add, and, Value } = Animated;
-const TOP_BAR_HEIGHT = getStatusBarHeight();
+const { set, cond, block, eq, add, and, not, Value } = Animated;
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -74,8 +71,8 @@ const getInitialWordState = words => {
       height: null,
       x: null,
       y: null,
-      centerX: null,
-      centerY: null,
+      centreX: null,
+      centreY: null,
       angle: i * (360 / words.length),
     };
   });
@@ -104,7 +101,8 @@ export default class CircleOfWords extends Component {
     this.panHandlers = this.props.words.map((w, i) => this.getEventHandlerForWord(i));
   }
 
-  getInsideWordBoundsConditions = (index, absoluteX, absoluteY) => {
+  // If drag gesture is inside another word, snap it to that word's centre
+  onDragOverWordSnapToCentre = (index, { absoluteX, absoluteY }) => {
     return this.wordDimensions.map(wd => {
       return cond(eq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true), [
         set(this.lineEnds[index].x, wd.centreX),
@@ -113,29 +111,12 @@ export default class CircleOfWords extends Component {
     });
   };
 
-  // getOutsideWordBoundsConditions = (index, absoluteX, absoluteY, state) => {
-  //   return this.wordDimensions.map(wd => {
-  //     return cond(
-  //       and(
-  //         eq(state, State.END),
-  //         neq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
-  //       ),
-  //       [
-  //         set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
-  //         set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
-  //       ],
-  //     );
-  //   });
-  // };
-
-  getOutsideWordBoundsCondition = (index, absoluteX, absoluteY, state) => {
+  // If drag gesture is not inside any box, reset it to original place
+  onDragEndResetLinePosition = (index, { absoluteX, absoluteY, state }) => {
     return cond(
       and(
         eq(state, State.END),
-        neq(
-          pointInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated),
-          true,
-        ),
+        not(pointInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated)),
       ),
       [
         set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
@@ -144,16 +125,21 @@ export default class CircleOfWords extends Component {
     );
   };
 
+  updateLineOnDrag = (index, { translationX, translationY }) => {
+    return [
+      set(this.lineEnds[index].x, add(translationX, this.wordDimensions[index].centreX)),
+      set(this.lineEnds[index].y, add(translationY, this.wordDimensions[index].centreY)),
+    ];
+  };
+
   getEventHandlerForWord = index => {
     return Animated.event([
       {
-        nativeEvent: ({ translationX, translationY, state, absoluteX, absoluteY }) => {
+        nativeEvent: event => {
           return block([
-            set(this.lineEnds[index].x, add(translationX, this.wordDimensions[index].centreX)),
-            set(this.lineEnds[index].y, add(translationY, this.wordDimensions[index].centreY)),
-            [...this.getInsideWordBoundsConditions(index, absoluteX, absoluteY)],
-            // [...this.getOutsideWordBoundsConditions(index, absoluteX, absoluteY, state)],
-            this.getOutsideWordBoundsCondition(index, absoluteX, absoluteY, state),
+            [...this.updateLineOnDrag(index, event)],
+            this.onDragEndResetLinePosition(index, event),
+            [...this.onDragOverWordSnapToCentre(index, event)],
           ]);
         },
       },
@@ -189,8 +175,8 @@ export default class CircleOfWords extends Component {
         const startingY = -1 * halfHeight;
         clonedWordState[i] = {
           ...w,
-          centerX: xCoord + RADIUS,
-          centerY: yCoord,
+          centreX: xCoord + RADIUS,
+          centreY: yCoord,
           x: startingX + xCoord,
           y: startingY + yCoord,
         };
@@ -199,14 +185,16 @@ export default class CircleOfWords extends Component {
     }
 
     wordState.forEach((w, i) => {
-      this.wordDimensions[i].centreX.setValue(circlePositionX + w.centerX);
-      this.wordDimensions[i].centreY.setValue(circlePositionY + w.centerY);
-      this.wordDimensions[i].x1.setValue(circlePositionX + w.x - BUFFER_AMOUNT);
-      this.wordDimensions[i].x2.setValue(circlePositionX + w.x + w.width + BUFFER_AMOUNT);
-      this.wordDimensions[i].y1.setValue(circlePositionY + w.y + TOP_BAR_HEIGHT - BUFFER_AMOUNT);
-      this.wordDimensions[i].y2.setValue(
-        circlePositionY + w.y + w.height + TOP_BAR_HEIGHT + BUFFER_AMOUNT,
+      const { centreX, centreY, x1, x2, y1, y2 } = getAbsoluteCoordinatesWithBuffer(
+        { x: circlePositionX, y: circlePositionY },
+        w,
       );
+      this.wordDimensions[i].centreX.setValue(centreX);
+      this.wordDimensions[i].centreY.setValue(centreY);
+      this.wordDimensions[i].x1.setValue(x1);
+      this.wordDimensions[i].x2.setValue(x2);
+      this.wordDimensions[i].y1.setValue(y1);
+      this.wordDimensions[i].y2.setValue(y2);
     });
   };
 
@@ -219,9 +207,9 @@ export default class CircleOfWords extends Component {
           <Svg height={screenHeight} width={screenWidth}>
             {wordState.map(w => (
               <AnimatedLine
-                x1={circlePositionX + w.centerX}
+                x1={circlePositionX + w.centreX}
                 x2={this.lineEnds[w.index].x}
-                y1={circlePositionY + w.centerY}
+                y1={circlePositionY + w.centreY}
                 y2={this.lineEnds[w.index].y}
                 stroke={w.color}
                 strokeWidth="7"
@@ -249,6 +237,8 @@ export default class CircleOfWords extends Component {
             </WordContainer>
           ))}
         </Circle>
+        {/* <Box />
+        <Box2 /> */}
       </ContentContainer>
     );
   }
