@@ -8,13 +8,15 @@ import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
 import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
-import { containerColors, getCircleCoordinatesForAngle } from "./game-utils";
+import { containerColors, getCircleCoordinatesForAngle, pointInsideBounds } from "./game-utils";
+import { getStatusBarHeight } from "react-native-status-bar-height";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 
-const { set, cond, block, eq, add, Value } = Animated;
+const { set, cond, block, eq, neq, add, and, Value } = Animated;
+const TOP_BAR_HEIGHT = getStatusBarHeight();
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -75,15 +77,15 @@ const getInitialWordState = words => {
 export default class CircleOfWords extends Component {
   constructor(props) {
     super(props);
-    this.lineEndX = new Value(0);
-    this.lineEndY = new Value(0);
-    this.offsetX = new Value(0);
-    this.offsetY = new Value(0);
-
-    this.lineEndsX = this.props.words.map(w => new Value(0));
-    this.lineEndsY = this.props.words.map(w => new Value(0));
-    this.offsetsX = this.props.words.map(w => new Value(0));
-    this.offsetsY = this.props.words.map(w => new Value(0));
+    this.lineEnds = this.props.words.map(w => ({ x: new Value(0), y: new Value(0) }));
+    this.wordDimensions = this.props.words.map(w => ({
+      centreX: new Value(0),
+      centreY: new Value(0),
+      x1: new Value(0),
+      x2: new Value(0),
+      y1: new Value(0),
+      y2: new Value(0),
+    }));
 
     this.state = {
       wordState: getInitialWordState(this.props.words),
@@ -98,14 +100,44 @@ export default class CircleOfWords extends Component {
   getEventHandlerForWord = index => {
     return Animated.event([
       {
-        nativeEvent: event => {
+        nativeEvent: ({ translationX, translationY, state, absoluteX, absoluteY }) => {
           return block([
-            set(this.lineEndsX[index], add(event.translationX, this.offsetsX[index])),
-            set(this.lineEndsY[index], add(event.translationY, this.offsetsY[index])),
-            cond(eq(event.state, State.END), [
-              set(this.lineEndsX[index], this.offsetsX[index]),
-              set(this.lineEndsY[index], this.offsetsY[index]),
-            ]),
+            set(this.lineEnds[index].x, add(translationX, this.wordDimensions[index].centreX)),
+            set(this.lineEnds[index].y, add(translationY, this.wordDimensions[index].centreY)),
+            cond(
+              and(
+                eq(state, State.END),
+                eq(
+                  pointInsideBounds(
+                    { x: absoluteX, y: absoluteY },
+                    this.wordDimensions[0],
+                    Animated,
+                  ),
+                  true,
+                ),
+              ),
+              [
+                set(this.lineEnds[index].x, this.wordDimensions[0].centreX),
+                set(this.lineEnds[index].y, this.wordDimensions[0].centreY),
+              ],
+            ),
+            cond(
+              and(
+                eq(state, State.END),
+                neq(
+                  pointInsideBounds(
+                    { x: absoluteX, y: absoluteY },
+                    this.wordDimensions[0],
+                    Animated,
+                  ),
+                  true,
+                ),
+              ),
+              [
+                set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
+                set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
+              ],
+            ),
           ]);
         },
       },
@@ -151,8 +183,12 @@ export default class CircleOfWords extends Component {
     }
 
     wordState.forEach((w, i) => {
-      this.offsetsX[i].setValue(circlePositionX + w.centerX);
-      this.offsetsY[i].setValue(circlePositionY + w.centerY);
+      this.wordDimensions[i].centreX.setValue(circlePositionX + w.centerX);
+      this.wordDimensions[i].centreY.setValue(circlePositionY + w.centerY);
+      this.wordDimensions[i].x1.setValue(circlePositionX + w.x);
+      this.wordDimensions[i].x2.setValue(circlePositionX + w.x + w.width);
+      this.wordDimensions[i].y1.setValue(circlePositionY + w.y + TOP_BAR_HEIGHT);
+      this.wordDimensions[i].y2.setValue(circlePositionY + w.y + w.height + TOP_BAR_HEIGHT);
     });
   };
 
@@ -166,9 +202,9 @@ export default class CircleOfWords extends Component {
             {wordState.map(w => (
               <AnimatedLine
                 x1={circlePositionX + w.centerX}
-                x2={this.lineEndsX[w.index]}
+                x2={this.lineEnds[w.index].x}
                 y1={circlePositionY + w.centerY}
-                y2={this.lineEndsY[w.index]}
+                y2={this.lineEnds[w.index].y}
                 stroke={w.color}
                 strokeWidth="7"
               />
