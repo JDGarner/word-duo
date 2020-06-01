@@ -20,7 +20,7 @@ const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 
-const { set, cond, block, eq, add, and, Value } = Animated;
+const { set, cond, block, eq, add, and, call, Value } = Animated;
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -53,10 +53,13 @@ const WordContainer = styled(View)`
   left: ${({ x }) => x};
   background-color: ${({ color }) => color};
   border-radius: 26;
+  width: 145;
 `;
+// TODO: decide on fixed or dynamic width
+// (if using fixed can remove onLayout logic to check width)
 
 const WordText = styled(MediumLargeText)`
-  padding-horizontal: 18;
+  /* padding-horizontal: 18; */
   padding-top: ${5 + TEXT_TOP_PADDING};
   padding-bottom: 5;
 `;
@@ -74,6 +77,7 @@ const getInitialWordState = words => {
       centreX: null,
       centreY: null,
       angle: i * (360 / words.length),
+      matched: false,
     };
   });
 };
@@ -82,13 +86,14 @@ export default class CircleOfWords extends Component {
   constructor(props) {
     super(props);
     this.lineEnds = this.props.words.map(w => ({ x: new Value(0), y: new Value(0) }));
-    this.wordDimensions = this.props.words.map(w => ({
+    this.wordDimensions = this.props.words.map((w, i) => ({
       centreX: new Value(0),
       centreY: new Value(0),
       x1: new Value(0),
       x2: new Value(0),
       y1: new Value(0),
       y2: new Value(0),
+      index: i,
     }));
 
     this.state = {
@@ -101,14 +106,34 @@ export default class CircleOfWords extends Component {
     this.panHandlers = this.props.words.map((w, i) => this.getEventHandlerForWord(i));
   }
 
-  // If drag gesture is inside another word, snap it to that word's centre
-  onDragOverWordSnapToCentre = (index, { absoluteX, absoluteY }) => {
+  onDragOverAnotherWord = (index, { absoluteX, absoluteY, state }) => {
     return this.wordDimensions.map(wd => {
-      return cond(eq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true), [
-        set(this.lineEnds[index].x, wd.centreX),
-        set(this.lineEnds[index].y, wd.centreY),
-      ]);
+      return cond(
+        eq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
+        // If drag is inside another word -> SNAP TO ITS CENTRE
+        [
+          set(this.lineEnds[index].x, wd.centreX),
+          set(this.lineEnds[index].y, wd.centreY),
+
+          // If drag has ended inside another word -> MATCH THOSE WORDS
+          cond(
+            eq(state, State.END),
+            call([], () => this.onMatchWords(this.wordDimensions[index], wd)),
+          ),
+        ],
+      );
     });
+  };
+
+  onMatchWords = (originWord, destinationWord) => {
+    if (originWord.index !== destinationWord.index) {
+      const wordState = cloneDeep(this.state.wordState);
+
+      wordState[originWord.index].matched = true;
+      wordState[destinationWord.index].matched = true;
+
+      this.setState({ wordState });
+    }
   };
 
   // If drag gesture is not inside any box, reset it to original place
@@ -139,7 +164,7 @@ export default class CircleOfWords extends Component {
           return block([
             [...this.updateLineOnDrag(index, event)],
             this.onDragEndResetLinePosition(index, event),
-            [...this.onDragOverWordSnapToCentre(index, event)],
+            [...this.onDragOverAnotherWord(index, event)],
           ]);
         },
       },
@@ -159,6 +184,7 @@ export default class CircleOfWords extends Component {
     this.setState({ wordState }, this.onLayoutUpdate);
   };
 
+  // Word/Circle positions have changed, update the state about their positions
   onLayoutUpdate = () => {
     const { allPositionsSet, wordState, circlePositionX, circlePositionY } = this.state;
 
@@ -225,6 +251,7 @@ export default class CircleOfWords extends Component {
               y={w.y || 0}
               color={w.color}>
               <PanGestureHandler
+                enabled={!w.matched}
                 minDist={2}
                 onGestureEvent={this.panHandlers[w.index]}
                 onHandlerStateChange={this.panHandlers[w.index]}>
@@ -237,8 +264,6 @@ export default class CircleOfWords extends Component {
             </WordContainer>
           ))}
         </Circle>
-        {/* <Box />
-        <Box2 /> */}
       </ContentContainer>
     );
   }
