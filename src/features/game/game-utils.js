@@ -31,6 +31,19 @@ export const getCircleCoordinatesForAngle = (angle, radius) => {
   };
 };
 
-export const pointInsideBounds = ({ x, y }, { x1, y1, x2, y2 }, { and, lessThan, greaterThan }) => {
-  return and(and(greaterThan(x, x1), lessThan(x, x2)), and(greaterThan(y, y1), lessThan(y, y2)));
+export const pointInsideBounds = (
+  { x, y },
+  { x1, y1, x2, y2 },
+  bufferAmount,
+  { and, add, sub, lessThan, greaterThan },
+) => {
+  const bx1 = sub(x1, bufferAmount);
+  const bx2 = add(x2, bufferAmount);
+  const by1 = sub(y1, bufferAmount);
+  const by2 = add(y2, bufferAmount);
+
+  return and(
+    and(greaterThan(x, bx1), lessThan(x, bx2)),
+    and(greaterThan(y, by1), lessThan(y, by2)),
+  );
 };

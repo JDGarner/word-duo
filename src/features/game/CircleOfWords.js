@@ -86,6 +86,7 @@ export default class CircleOfWords extends Component {
       y1: new Value(0),
       y2: new Value(0),
     }));
+    this.bufferAmount = new Value(15);
 
     this.state = {
       wordState: getInitialWordState(this.props.words),
@@ -105,16 +106,14 @@ export default class CircleOfWords extends Component {
             set(this.lineEnds[index].x, add(translationX, this.wordDimensions[index].centreX)),
             set(this.lineEnds[index].y, add(translationY, this.wordDimensions[index].centreY)),
             cond(
-              and(
-                eq(state, State.END),
-                eq(
-                  pointInsideBounds(
-                    { x: absoluteX, y: absoluteY },
-                    this.wordDimensions[0],
-                    Animated,
-                  ),
-                  true,
+              eq(
+                pointInsideBounds(
+                  { x: absoluteX, y: absoluteY },
+                  this.wordDimensions[0],
+                  this.bufferAmount,
+                  Animated,
                 ),
+                true,
               ),
               [
                 set(this.lineEnds[index].x, this.wordDimensions[0].centreX),
@@ -128,6 +127,7 @@ export default class CircleOfWords extends Component {
                   pointInsideBounds(
                     { x: absoluteX, y: absoluteY },
                     this.wordDimensions[0],
+                    this.bufferAmount,
                     Animated,
                   ),
                   true,
