@@ -11,9 +11,9 @@ import colors from "../../theme/colors";
 import {
   containerColors,
   getCircleCoordinatesForAngle,
-  pointInsideBounds,
-  pointNotInsideAnyBounds,
+  valueNotInsideAnyBounds,
   getAbsoluteCoordinatesWithBuffer,
+  valueInsideBounds,
 } from "./game-utils";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
@@ -41,8 +41,8 @@ const RADIUS = DIAMETER / 2;
 const Circle = styled(View)`
   height: ${DIAMETER};
   width: ${DIAMETER};
-  border-width: 1;
-  border-color: red;
+  /* border-width: 1;
+  border-color: red; */
   position: relative;
   border-radius: ${RADIUS};
 `;
@@ -77,7 +77,7 @@ const getInitialWordState = words => {
       centreX: null,
       centreY: null,
       angle: i * (360 / words.length),
-      matched: false,
+      isMatched: false,
     };
   });
 };
@@ -89,11 +89,12 @@ export default class CircleOfWords extends Component {
     this.wordDimensions = this.props.words.map((w, i) => ({
       centreX: new Value(0),
       centreY: new Value(0),
-      x1: new Value(0),
-      x2: new Value(0),
-      y1: new Value(0),
-      y2: new Value(0),
+      x1Value: new Value(0),
+      x2Value: new Value(0),
+      y1Value: new Value(0),
+      y2Value: new Value(0),
       index: i,
+      isMatched: new Value(false),
     }));
 
     this.state = {
@@ -106,55 +107,68 @@ export default class CircleOfWords extends Component {
     this.panHandlers = this.props.words.map((w, i) => this.getEventHandlerForWord(i));
   }
 
+  onMatchWords = (originWord, destinationWord) => {
+    const wordState = cloneDeep(this.state.wordState);
+
+    wordState[originWord.index].isMatched = true;
+    wordState[destinationWord.index].isMatched = true;
+
+    if (wordState.every(w => w.isMatched)) {
+      this.props.onAllWordsMatched();
+    } else {
+      this.wordDimensions[originWord.index].isMatched.setValue(true);
+      this.wordDimensions[destinationWord.index].isMatched.setValue(true);
+    }
+
+    this.setState({ wordState });
+  };
+
+  onMatchedSomeWord = (matchedWord, index) => {
+    if (
+      matchedWord.index !== index &&
+      !this.state.wordState[matchedWord.index].isMatched &&
+      !this.state.wordState[index].isMatched
+    ) {
+      this.onMatchWords(this.wordDimensions[index], matchedWord);
+    }
+  };
+
   onDragOverAnotherWord = (index, { absoluteX, absoluteY, state }) => {
     return this.wordDimensions.map(wd => {
       return cond(
-        eq(pointInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
-        // If drag is inside another word -> SNAP TO ITS CENTRE
+        and(
+          eq(this.wordDimensions[index].isMatched, false),
+          eq(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
+        ),
         [
-          set(this.lineEnds[index].x, wd.centreX),
-          set(this.lineEnds[index].y, wd.centreY),
-
-          // If drag has ended inside another word -> MATCH THOSE WORDS
-          cond(
-            eq(state, State.END),
-            call([], () => this.onMatchWords(this.wordDimensions[index], wd)),
-          ),
+          // If drag is inside another word and ACTIVE -> SNAP TO ITS CENTRE
+          cond(eq(state, State.ACTIVE), [
+            set(this.lineEnds[index].x, wd.centreX),
+            set(this.lineEnds[index].y, wd.centreY),
+          ]),
+          // If drag is inside another word and ENDED -> MATCH IT
+          cond(eq(state, State.END), call([], () => this.onMatchedSomeWord(wd, index))),
         ],
       );
     });
   };
 
-  onMatchWords = (originWord, destinationWord) => {
-    if (originWord.index !== destinationWord.index) {
-      const wordState = cloneDeep(this.state.wordState);
-
-      wordState[originWord.index].matched = true;
-      wordState[destinationWord.index].matched = true;
-
-      this.setState({ wordState });
-    }
-  };
-
   // If drag gesture is not inside any box, reset it to original place
   onDragEndResetLinePosition = (index, { absoluteX, absoluteY, state }) => {
     return cond(
-      and(
-        eq(state, State.END),
-        pointNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated),
-      ),
-      [
+      and(eq(state, State.END), eq(this.wordDimensions[index].isMatched, false)),
+      cond(valueNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated), [
         set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
         set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
-      ],
+      ]),
     );
   };
 
-  updateLineOnDrag = (index, { translationX, translationY }) => {
-    return [
+  updateLineOnDrag = (index, { translationX, translationY, state }) => {
+    return cond(eq(state, State.ACTIVE), [
       set(this.lineEnds[index].x, add(translationX, this.wordDimensions[index].centreX)),
       set(this.lineEnds[index].y, add(translationY, this.wordDimensions[index].centreY)),
-    ];
+    ]);
   };
 
   getEventHandlerForWord = index => {
@@ -162,7 +176,7 @@ export default class CircleOfWords extends Component {
       {
         nativeEvent: event => {
           return block([
-            [...this.updateLineOnDrag(index, event)],
+            this.updateLineOnDrag(index, event),
             this.onDragEndResetLinePosition(index, event),
             [...this.onDragOverAnotherWord(index, event)],
           ]);
@@ -217,10 +231,15 @@ export default class CircleOfWords extends Component {
       );
       this.wordDimensions[i].centreX.setValue(centreX);
       this.wordDimensions[i].centreY.setValue(centreY);
-      this.wordDimensions[i].x1.setValue(x1);
-      this.wordDimensions[i].x2.setValue(x2);
-      this.wordDimensions[i].y1.setValue(y1);
-      this.wordDimensions[i].y2.setValue(y2);
+      this.wordDimensions[i].x1Value.setValue(x1);
+      this.wordDimensions[i].x2Value.setValue(x2);
+      this.wordDimensions[i].y1Value.setValue(y1);
+      this.wordDimensions[i].y2Value.setValue(y2);
+    });
+
+    this.lineEnds.forEach((l, i) => {
+      l.x.setValue(this.wordDimensions[i].centreX);
+      l.y.setValue(this.wordDimensions[i].centreY);
     });
   };
 
@@ -233,6 +252,7 @@ export default class CircleOfWords extends Component {
           <Svg height={screenHeight} width={screenWidth}>
             {wordState.map(w => (
               <AnimatedLine
+                key={w.text}
                 x1={circlePositionX + w.centreX}
                 x2={this.lineEnds[w.index].x}
                 y1={circlePositionY + w.centreY}
@@ -251,7 +271,7 @@ export default class CircleOfWords extends Component {
               y={w.y || 0}
               color={w.color}>
               <PanGestureHandler
-                enabled={!w.matched}
+                enabled={!w.isMatched}
                 minDist={2}
                 onGestureEvent={this.panHandlers[w.index]}
                 onHandlerStateChange={this.panHandlers[w.index]}>

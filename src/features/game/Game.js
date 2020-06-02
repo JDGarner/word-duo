@@ -10,10 +10,10 @@ const ContentContainer = styled(View)`
   width: 100%;
 `;
 
-const Game = ({ words }) => {
+const Game = ({ words, levelIndex, onAllWordsMatched }) => {
   return (
     <ContentContainer>
-      <CircleOfWords words={words} />
+      <CircleOfWords key={levelIndex} words={words} onAllWordsMatched={onAllWordsMatched} />
     </ContentContainer>
   );
 };

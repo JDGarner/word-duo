@@ -47,36 +47,29 @@ export const getAbsoluteCoordinatesWithBuffer = (initialOffset, box) => {
   };
 };
 
-// If adding buffer here
-// export const pointInsideBounds = (
-//   { x, y },
-//   { x1, y1, x2, y2 },
-//   bufferAmount,
-//   { and, add, sub, lessThan, greaterThan },
-// ) => {
-//   const bx1 = sub(x1, bufferAmount);
-//   const bx2 = add(x2, bufferAmount);
-//   const by1 = sub(y1, bufferAmount);
-//   const by2 = add(y2, bufferAmount);
-
-//   return and(
-//     and(greaterThan(x, bx1), lessThan(x, bx2)),
-//     and(greaterThan(y, by1), lessThan(y, by2)),
-//   );
-// };
-
-export const pointInsideBounds = ({ x, y }, { x1, y1, x2, y2 }, { and, lessThan, greaterThan }) => {
+const valueInsideBoundsOnly = (
+  { x, y },
+  { x1Value: x1, y1Value: y1, x2Value: x2, y2Value: y2 },
+  { and, lessThan, greaterThan },
+) => {
   return and(and(greaterThan(x, x1), lessThan(x, x2)), and(greaterThan(y, y1), lessThan(y, y2)));
 };
 
-export const pointInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
-  return Animated.or.apply(null, allBounds.map(b => pointInsideBounds({ x, y }, b, Animated)));
+export const valueInsideBounds = ({ x, y }, bounds, Animated) => {
+  return Animated.and(
+    Animated.eq(bounds.isMatched, false),
+    valueInsideBoundsOnly({ x, y }, bounds, Animated),
+  );
 };
 
-export const pointNotInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
-  return Animated.not(pointInsideAnyBounds({ x, y }, allBounds, Animated));
+export const valueInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
+  return Animated.or.apply(null, allBounds.map(b => valueInsideBounds({ x, y }, b, Animated)));
 };
 
-export const pointOutsideBounds = ({ x, y }, allBounds, Animated) => {
-  return allBounds.every(b => !pointInsideBounds({ x, y }, b, Animated));
+export const valueNotInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
+  return Animated.not(valueInsideAnyBounds({ x, y }, allBounds, Animated));
+};
+
+export const pointInsideBounds = ({ x, y }, { x1, y1, x2, y2 }) => {
+  return x > x1 && x < x2 && y > y1 && y < y2;
 };
