@@ -30,9 +30,13 @@ export const getCircleCoordinatesForAngle = (angle, radius) => {
   const hypotenuseJ = opposite * 2;
   const angleB = (180 - angle) / 2;
   const angleC = 90 - angleB;
+
+  const x = hypotenuseJ * Math.cos(toRadians(angleC));
+  const y = hypotenuseJ * Math.sin(toRadians(angleC));
+
   return {
-    xCoord: hypotenuseJ * Math.cos(toRadians(angleC)),
-    yCoord: hypotenuseJ * Math.sin(toRadians(angleC)),
+    xCoord: Math.round(x * 100) / 100,
+    yCoord: Math.round(y * 100) / 100,
   };
 };
 

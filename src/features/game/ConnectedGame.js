@@ -3,8 +3,8 @@ import Game from "./Game";
 import { onAllWordsMatched } from "./redux/game-actions";
 
 const mapStateToProps = ({ game }) => {
-  const { levelIndex, words } = game;
-  return { levelIndex, words };
+  const { levelIndex, currentWords } = game;
+  return { levelIndex, words: currentWords };
 };
 
 const mapDispatchToProps = {

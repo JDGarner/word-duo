@@ -1,9 +1,13 @@
-import { shuffle } from "lodash";
+import { shuffle, cloneDeep } from "lodash";
 import { ON_ALL_WORDS_MATCHED } from "./game-actions";
-import synonyms from "../../../mock-data/synonyms";
+import levels from "../../../mock-data/levels";
+import { formatLevels } from "./game-redux-utils";
+
+const formattedLevels = formatLevels(levels);
 
 const initialState = {
-  words: synonyms.slice(0, 6),
+  levels: formattedLevels,
+  currentWords: shuffle(formattedLevels[0].words),
   levelIndex: 0,
 };
 
@@ -12,12 +16,17 @@ export default (state = initialState, action) => {
 
   switch (type) {
     case ON_ALL_WORDS_MATCHED: {
-      const words = shuffle(synonyms.slice(0, 6));
+      let levelIndex = state.levelIndex + 1;
+      if (levelIndex >= levels.length) {
+        levelIndex = 0;
+      }
+
+      const currentWords = shuffle(cloneDeep(state.levels[levelIndex].words));
 
       return {
         ...state,
-        words,
-        levelIndex: state.levelIndex + 1,
+        currentWords,
+        levelIndex,
       };
     }
 

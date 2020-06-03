@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { View } from "react-native";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
-import { Svg, Line } from "react-native-svg";
+import { Svg, Line, Defs, LinearGradient, Stop } from "react-native-svg";
 import { cloneDeep, capitalize } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
@@ -20,7 +20,7 @@ const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 
-const { set, cond, block, eq, add, and, call, Value } = Animated;
+const { set, cond, block, eq, add, and, or, call, Value } = Animated;
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -35,7 +35,7 @@ const SvgContainer = styled(View)`
   position: absolute;
 `;
 
-const DIAMETER = screenWidth - 120;
+const DIAMETER = screenWidth - 160;
 const RADIUS = DIAMETER / 2;
 
 const Circle = styled(View)`
@@ -47,7 +47,7 @@ const Circle = styled(View)`
   border-radius: ${RADIUS};
 `;
 
-const WordContainer = styled(View)`
+const WordContainer = styled(Animated.View)`
   position: absolute;
   top: ${({ y }) => y};
   left: ${({ x }) => x};
@@ -67,8 +67,9 @@ const WordText = styled(MediumLargeText)`
 const getInitialWordState = words => {
   return words.map((w, i) => {
     return {
-      text: w,
+      text: w.text,
       color: containerColors[i],
+      matchedColor: containerColors[i],
       index: i,
       width: null,
       height: null,
@@ -76,6 +77,10 @@ const getInitialWordState = words => {
       y: null,
       centreX: null,
       centreY: null,
+      originWordX: null,
+      originWordY: null,
+      matchedWordX: null,
+      matchedWordY: null,
       angle: i * (360 / words.length),
       isMatched: false,
     };
@@ -95,7 +100,10 @@ export default class CircleOfWords extends Component {
       y2Value: new Value(0),
       index: i,
       isMatched: new Value(false),
+      scaleValue: new Value(1),
     }));
+
+    this.scaleValueIncrease = new Value(0.2);
 
     this.state = {
       wordState: getInitialWordState(this.props.words),
@@ -109,15 +117,24 @@ export default class CircleOfWords extends Component {
 
   onMatchWords = (originWord, destinationWord) => {
     const wordState = cloneDeep(this.state.wordState);
+    const originWordState = wordState[originWord.index];
+    const destinationWordState = wordState[destinationWord.index];
 
-    wordState[originWord.index].isMatched = true;
-    wordState[destinationWord.index].isMatched = true;
+    originWordState.isMatched = true;
+    destinationWordState.isMatched = true;
+    originWordState.matchedColor = destinationWordState.color;
+    originWordState.originWordX = originWordState.centreX / DIAMETER;
+    originWordState.originWordY = originWordState.centreY / DIAMETER;
+    originWordState.matchedWordX = destinationWordState.centreX / DIAMETER;
+    originWordState.matchedWordY = destinationWordState.centreY / DIAMETER;
 
     if (wordState.every(w => w.isMatched)) {
-      this.props.onAllWordsMatched();
+      setTimeout(() => {
+        this.props.onAllWordsMatched();
+      }, 750);
     } else {
-      this.wordDimensions[originWord.index].isMatched.setValue(true);
-      this.wordDimensions[destinationWord.index].isMatched.setValue(true);
+      originWord.isMatched.setValue(true);
+      destinationWord.isMatched.setValue(true);
     }
 
     this.setState({ wordState });
@@ -134,33 +151,54 @@ export default class CircleOfWords extends Component {
   };
 
   onDragOverAnotherWord = (index, { absoluteX, absoluteY, state }) => {
-    return this.wordDimensions.map(wd => {
-      return cond(
-        and(
+    return this.wordDimensions
+      .filter(w => w.index !== index)
+      .map(wd => {
+        return cond(
           eq(this.wordDimensions[index].isMatched, false),
-          eq(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
-        ),
-        [
-          // If drag is inside another word and ACTIVE -> SNAP TO ITS CENTRE
-          cond(eq(state, State.ACTIVE), [
-            set(this.lineEnds[index].x, wd.centreX),
-            set(this.lineEnds[index].y, wd.centreY),
-          ]),
-          // If drag is inside another word and ENDED -> MATCH IT
-          cond(eq(state, State.END), call([], () => this.onMatchedSomeWord(wd, index))),
-        ],
-      );
-    });
+          cond(
+            eq(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
+            [
+              // If drag is inside wd and ACTIVE -> SNAP TO ITS CENTRE
+              cond(eq(state, State.ACTIVE), [
+                set(this.lineEnds[index].x, wd.centreX),
+                set(this.lineEnds[index].y, wd.centreY),
+                set(wd.scaleValue, new Value(1.2)),
+              ]),
+              // If drag is inside another word and ENDED -> MATCH IT
+              cond(eq(state, State.END), call([], () => this.onMatchedSomeWord(wd, index))),
+            ],
+            cond(eq(state, State.ACTIVE), set(wd.scaleValue, new Value(1))),
+          ),
+        );
+      });
   };
 
   // If drag gesture is not inside any box, reset it to original place
   onDragEndResetLinePosition = (index, { absoluteX, absoluteY, state }) => {
     return cond(
-      and(eq(state, State.END), eq(this.wordDimensions[index].isMatched, false)),
-      cond(valueNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated), [
+      and(
+        eq(state, State.END),
+        eq(this.wordDimensions[index].isMatched, false),
+        valueNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, this.wordDimensions, Animated),
+      ),
+      [
         set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
         set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
-      ]),
+      ],
+    );
+  };
+
+  onDragEndResetScale = (index, { absoluteX, absoluteY, state }) => {
+    const filtered = this.wordDimensions.filter(w => w.index !== index);
+
+    return cond(
+      and(
+        eq(state, State.END),
+        eq(this.wordDimensions[index].isMatched, false),
+        valueNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, filtered, Animated),
+      ),
+      set(this.wordDimensions[index].scaleValue, new Value(1)),
     );
   };
 
@@ -171,13 +209,22 @@ export default class CircleOfWords extends Component {
     ]);
   };
 
+  updateScaleOnDrag = (index, { state }) => {
+    return cond(
+      or(eq(state, State.BEGAN), eq(state, State.ACTIVE)),
+      set(this.wordDimensions[index].scaleValue, new Value(1.2)),
+    );
+  };
+
   getEventHandlerForWord = index => {
     return Animated.event([
       {
         nativeEvent: event => {
           return block([
             this.updateLineOnDrag(index, event),
+            this.updateScaleOnDrag(index, event),
             this.onDragEndResetLinePosition(index, event),
+            this.onDragEndResetScale(index, event),
             [...this.onDragOverAnotherWord(index, event)],
           ]);
         },
@@ -250,6 +297,20 @@ export default class CircleOfWords extends Component {
       <ContentContainer>
         <SvgContainer>
           <Svg height={screenHeight} width={screenWidth}>
+            <Defs>
+              {wordState.map(w => (
+                <LinearGradient
+                  id={`grad-${w.index}`}
+                  x1={w.originWordX || 0}
+                  y1={w.originWordY || 0}
+                  x2={w.matchedWordX || 0}
+                  y2={w.matchedWordY || 0}
+                  key={`${w.text}=def`}>
+                  <Stop offset="0" stopColor={w.color} stopOpacity="1" />
+                  <Stop offset="1" stopColor={w.matchedColor} stopOpacity="1" />
+                </LinearGradient>
+              ))}
+            </Defs>
             {wordState.map(w => (
               <AnimatedLine
                 key={w.text}
@@ -257,7 +318,7 @@ export default class CircleOfWords extends Component {
                 x2={this.lineEnds[w.index].x}
                 y1={circlePositionY + w.centreY}
                 y2={this.lineEnds[w.index].y}
-                stroke={w.color}
+                stroke={`url(#grad-${w.index})`}
                 strokeWidth="7"
               />
             ))}
@@ -269,10 +330,11 @@ export default class CircleOfWords extends Component {
               onLayout={e => this.onWordLayout(e, w)}
               x={w.x || 0}
               y={w.y || 0}
-              color={w.color}>
+              color={w.color}
+              style={{ transform: [{ scale: this.wordDimensions[w.index].scaleValue }] }}>
               <PanGestureHandler
                 enabled={!w.isMatched}
-                minDist={2}
+                minDist={0}
                 onGestureEvent={this.panHandlers[w.index]}
                 onHandlerStateChange={this.panHandlers[w.index]}>
                 <Animated.View>
