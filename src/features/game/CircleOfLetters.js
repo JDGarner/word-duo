@@ -112,7 +112,6 @@ const getInitialWordState = letters => {
       matchedWordX: null,
       matchedWordY: null,
       angle: i * (360 / letters.length),
-      isMatched: false,
     };
   });
 };
@@ -129,7 +128,6 @@ export default class CircleOfWords extends Component {
       y1Value: new Value(0),
       y2Value: new Value(0),
       index: i,
-      isMatched: new Value(false),
       isHighlighted: new Value(0),
       isConnected: new Value(false),
     }));
@@ -144,7 +142,19 @@ export default class CircleOfWords extends Component {
       allPositionsSet: false,
     };
 
-    this.panHandlers = this.props.letters.map((w, i) => this.getEventHandlerForWord(i));
+    // this.panHandlers = this.props.letters.map((w, i) => this.getEventHandlerForWord(i));
+    this.gestureHandler = Animated.event([
+      {
+        nativeEvent: event => {
+          return block([
+            this.onDragBegin(event),
+            this.updateLinePositionOnDrag(event),
+            this.onDragOverAnotherWord(event),
+            this.onDragEnd(event),
+          ]);
+        },
+      },
+    ]);
 
     this.wordBackgroundColors = this.wordDimensions.map(wd => {
       return interpolate(wd.isHighlighted, {
@@ -153,14 +163,10 @@ export default class CircleOfWords extends Component {
         extrapolate: Extrapolate.CLAMP,
       });
     });
-
-    // this.clock = new Clock();
-    // animation = new Value(0);
-    // transX = runTiming(this.clock, this.progress, this.animation);
   }
 
   // Find the line end that matches current index value, update it's position
-  setLineEndValue = (translationX, translationY) => {
+  setLineEndPositionOnDrag = (translationX, translationY) => {
     return this.lineEnds.map((lineEnd, i) => {
       return cond(
         eq(this.currentIndexValue, new Value(i)),
@@ -179,103 +185,40 @@ export default class CircleOfWords extends Component {
     });
   };
 
-  onMatchWords = (originWord, destinationWord) => {
-    const wordState = cloneDeep(this.state.wordState);
-    const originWordState = wordState[originWord.index];
-    const destinationWordState = wordState[destinationWord.index];
-
-    originWordState.isMatched = true;
-    destinationWordState.isMatched = true;
-    // originWordState.matchedColor = destinationWordState.bgColor;
-    originWordState.originWordX = originWordState.centreX / DIAMETER;
-    originWordState.originWordY = originWordState.centreY / DIAMETER;
-    originWordState.matchedWordX = destinationWordState.centreX / DIAMETER;
-    originWordState.matchedWordY = destinationWordState.centreY / DIAMETER;
-
-    if (wordState.every(w => w.isMatched)) {
-      setTimeout(() => {
-        this.props.onAllWordsMatched();
-      }, 750);
-    } else {
-      originWord.isMatched.setValue(true);
-      destinationWord.isMatched.setValue(true);
-    }
-
-    this.setState({ wordState });
+  // Set line end position directly to word centre
+  setLineEndPositionOnSnap = (centreX, centreY) => {
+    return this.lineEnds.map((lineEnd, i) => {
+      return cond(eq(this.currentIndexValue, new Value(i)), [
+        set(lineEnd.x, centreX),
+        set(lineEnd.y, centreY),
+      ]);
+    });
   };
 
-  onMatchedSomeWord = (matchedWord, index) => {
-    // if (
-    //   matchedWord.index !== index &&
-    //   !this.state.wordState[matchedWord.index].isMatched &&
-    //   !this.state.wordState[index].isMatched
-    // ) {
-    //   this.onMatchWords(this.wordDimensions[index], matchedWord);
-    // }
+  // If ALL letter nodes are connected
+  //   call onSubmitAnswer
+  // Else
+  //   reset all Line End positions to their respective centres
+  onDragEnd = ({ state }) => {
+    const resetLineEndsX = this.lineEnds.map((lineEnd, i) => {
+      return set(lineEnd.x, this.wordDimensions[i].centreX);
+    });
+
+    const resetLineEndsY = this.lineEnds.map((lineEnd, i) => {
+      return set(lineEnd.y, this.wordDimensions[i].centreY);
+    });
+
+    return cond(eq(state, State.END), [...resetLineEndsX, ...resetLineEndsY]);
   };
 
-  setCurrentLetterInChain = index => {
-    this.currentLetterIndexInChain = index;
-  };
-
-  // onDragOverAnotherWord = (index, { absoluteX, absoluteY, state }) => {
-  //   return this.wordDimensions
-  //     .filter(w => w.index !== index)
-  //     .map(wd => {
-  //       return cond(
-  //         eq(this.wordDimensions[index].isMatched, false),
-  //         cond(
-  //           eq(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), true),
-  //           [
-  //             // If drag is inside wd and ACTIVE -> SNAP TO ITS CENTRE
-  //             cond(eq(state, State.ACTIVE), [
-  //               set(this.lineEnds[index].x, wd.centreX),
-  //               set(this.lineEnds[index].y, wd.centreY),
-  //               set(wd.isHighlighted, new Value(1)),
-  //               set(wd.isConnected, new Value(true)),
-  //               set(this.currentIndexValue, new Value(wd.index)),
-  //             ]),
-  //             // If drag is inside another word and ENDED -> MATCH IT
-  //             cond(eq(state, State.END), [call([], () => this.onMatchedSomeWord(wd, index))]),
-  //           ],
-  //           // cond(eq(state, State.ACTIVE), set(wd.isHighlighted, new Value(0))),
-  //         ),
-  //       );
-  //     });
-  // };
-
-  // If drag gesture is not inside any box, reset it to original place
-  onDragEndResetLine = (index, { absoluteX, absoluteY, state }) => {
-    const filtered = this.wordDimensions.filter(w => w.index !== index);
-
-    return cond(
-      and(
-        eq(state, State.END),
-        eq(this.wordDimensions[index].isMatched, false),
-        valueNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, filtered, Animated),
-      ),
-      [
-        set(this.lineEnds[index].x, this.wordDimensions[index].centreX),
-        set(this.lineEnds[index].y, this.wordDimensions[index].centreY),
-        set(this.wordDimensions[index].isHighlighted, new Value(0)),
-        set(this.currentIndexValue, new Value(0)),
-      ],
-    );
-  };
-
-  // updateHighlightedOnDrag = (index, { state }) => {
-  //   return cond(
-  //     or(eq(state, State.BEGAN), eq(state, State.ACTIVE)),
-  //     set(this.wordDimensions[index].isHighlighted, new Value(1)),
-  //   );
-  // };
-
-  // If the drag goes into another word AND
-  //   then update currentIndex to that word
+  // If the drag goes into another word
+  //   Update currentIndex lineEnd to centre of that word
+  //   Update currentIndex to index of that word
   onDragOverAnotherWord = ({ absoluteX, absoluteY, state }) => {
     const onDragOverConds = this.wordDimensions.map(wd => {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
-        cond(eq(state, State.ACTIVE), [set(this.currentIndexValue, new Value(wd.index))]),
+        // [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
+        set(this.currentIndexValue, new Value(wd.index)),
       ]);
     });
 
@@ -283,31 +226,35 @@ export default class CircleOfWords extends Component {
   };
 
   updateLinePositionOnDrag = ({ translationX, translationY, state }) => {
-    return cond(eq(state, State.ACTIVE), this.setLineEndValue(translationX, translationY));
+    return cond(eq(state, State.ACTIVE), this.setLineEndPositionOnDrag(translationX, translationY));
   };
 
-  beginChain = (index, { state }) => {
-    return cond(eq(state, State.BEGAN), [
-      set(this.originIndexValue, new Value(index)),
-      set(this.currentIndexValue, new Value(index)),
-    ]);
+  // Check what letter node the gesture is inside, set that index as origin and current
+  onDragBegin = ({ absoluteX, absoluteY, state }) => {
+    const setOriginIndex = this.wordDimensions.map(wd => {
+      return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
+        set(this.originIndexValue, new Value(wd.index)),
+        set(this.currentIndexValue, new Value(wd.index)),
+      ]);
+    });
+
+    return cond(eq(state, State.BEGAN), setOriginIndex);
   };
 
-  getEventHandlerForWord = index => {
-    return Animated.event([
-      {
-        nativeEvent: event => {
-          return block([
-            this.beginChain(index, event),
-            this.updateLinePositionOnDrag(event),
-            this.onDragOverAnotherWord(event),
-            // this.updateHighlightedOnDrag(index, event),
-            // this.onDragEndResetLine(index, event),
-          ]);
-        },
-      },
-    ]);
-  };
+  // getEventHandlerForWord = index => {
+  //   return Animated.event([
+  //     {
+  //       nativeEvent: event => {
+  //         return block([
+  //           this.onDragBegin(index, event),
+  //           this.updateLinePositionOnDrag(event),
+  //           this.onDragOverAnotherWord(event),
+  //           this.onDragEnd(event),
+  //         ]);
+  //       },
+  //     },
+  //   ]);
+  // };
 
   onCircleLayout = event => {
     const { x, y } = event.nativeEvent.layout;
@@ -389,29 +336,30 @@ export default class CircleOfWords extends Component {
           </Svg>
         </SvgContainer>
         <Circle onLayout={this.onCircleLayout}>
-          {wordState.map(w => {
-            const containerStyle = [{ backgroundColor: this.wordBackgroundColors[w.index] }];
+          <PanGestureHandler
+            minDist={0}
+            onGestureEvent={this.gestureHandler}
+            onHandlerStateChange={this.gestureHandler}>
+            <Animated.View style={{ flex: 1 }}>
+              {wordState.map(w => {
+                const containerStyle = [{ backgroundColor: this.wordBackgroundColors[w.index] }];
 
-            return (
-              <WordContainer
-                onLayout={e => this.onWordLayout(e, w)}
-                x={w.x || 0}
-                y={w.y || 0}
-                style={containerStyle}>
-                <PanGestureHandler
-                  enabled={!w.isMatched}
-                  minDist={0}
-                  onGestureEvent={this.panHandlers[w.index]}
-                  onHandlerStateChange={this.panHandlers[w.index]}>
-                  <Animated.View>
-                    <WordText fontWeight="600" color={colors.wordColor}>
-                      {w.text}
-                    </WordText>
-                  </Animated.View>
-                </PanGestureHandler>
-              </WordContainer>
-            );
-          })}
+                return (
+                  <WordContainer
+                    onLayout={e => this.onWordLayout(e, w)}
+                    x={w.x || 0}
+                    y={w.y || 0}
+                    style={containerStyle}>
+                    <Animated.View>
+                      <WordText fontWeight="600" color={colors.wordColor}>
+                        {w.text}
+                      </WordText>
+                    </Animated.View>
+                  </WordContainer>
+                );
+              })}
+            </Animated.View>
+          </PanGestureHandler>
         </Circle>
       </ContentContainer>
     );
