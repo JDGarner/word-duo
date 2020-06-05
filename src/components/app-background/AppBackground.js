@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeAreaView, View } from "react-native";
+import { SafeAreaView, View, ImageBackground } from "react-native";
 import styled from "styled-components";
 // import LinearGradient from "react-native-linear-gradient";
 
@@ -13,7 +13,9 @@ const Background = styled(View)`
 const AppBackground = ({ children }) => {
   return (
     <Background>
-      <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>
+      <ImageBackground style={{ flex: 1, resizeMode: "cover" }} source={require("./jellyfish.jpg")}>
+        <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>
+      </ImageBackground>
     </Background>
   );
 

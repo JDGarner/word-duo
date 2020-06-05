@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import styled from "styled-components";
-import CircleOfWords from "./CircleOfWords";
+import CircleOfLetters from "./CircleOfLetters";
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -10,10 +10,10 @@ const ContentContainer = styled(View)`
   width: 100%;
 `;
 
-const Game = ({ words, levelIndex, onAllWordsMatched }) => {
+const Game = ({ letters, levelIndex, onAllWordsMatched }) => {
   return (
     <ContentContainer>
-      <CircleOfWords key={levelIndex} words={words} onAllWordsMatched={onAllWordsMatched} />
+      <CircleOfLetters key={levelIndex} letters={letters} onAllWordsMatched={onAllWordsMatched} />
     </ContentContainer>
   );
 };

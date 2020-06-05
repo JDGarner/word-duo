@@ -2,7 +2,7 @@
 // leaf, plant, bush, garden
 
 // neuron, cerebellum, brain
-// 
+//
 
 const levels = [
   {
@@ -32,4 +32,16 @@ const levels = [
   },
 ];
 
-export default levels;
+const levels2 = [
+  {
+    clueImage: "small.png",
+    text: "small",
+  },
+  {
+    clueImage: "large.png",
+    text: "large",
+  },
+];
+
+export default levels2;
+// export default levels;
