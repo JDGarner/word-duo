@@ -1,7 +1,28 @@
 import React, { Component } from "react";
 import { View } from "react-native";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
-import Animated from "react-native-reanimated";
+import Animated, {
+  set,
+  cond,
+  block,
+  eq,
+  add,
+  and,
+  or,
+  not,
+  call,
+  timing,
+  interpolate,
+  Extrapolate,
+  Value,
+  lessThan,
+  greaterOrEq,
+  clockRunning,
+  startClock,
+  stopClock,
+  debug,
+  Clock,
+} from "react-native-reanimated";
 import { Svg, Line, Defs, LinearGradient, Stop } from "react-native-svg";
 import { cloneDeep, capitalize } from "lodash";
 import styled from "styled-components";
@@ -19,26 +40,6 @@ import {
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
-
-const {
-  set,
-  cond,
-  block,
-  eq,
-  add,
-  and,
-  or,
-  call,
-  timing,
-  interpolate,
-  Extrapolate,
-  Value,
-  clockRunning,
-  startClock,
-  stopClock,
-  debug,
-  Clock,
-} = Animated;
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -128,12 +129,12 @@ export default class CircleOfWords extends Component {
       y1Value: new Value(0),
       y2Value: new Value(0),
       index: i,
-      isHighlighted: new Value(0),
       isConnected: new Value(false),
     }));
 
-    this.originIndexValue = new Value(0);
-    this.currentIndexValue = new Value(0);
+    this.originIndexValue = new Value(null);
+    this.currentIndexValue = new Value(null);
+    this.letterChain = [];
 
     this.state = {
       wordState: getInitialWordState(this.props.letters),
@@ -142,7 +143,6 @@ export default class CircleOfWords extends Component {
       allPositionsSet: false,
     };
 
-    // this.panHandlers = this.props.letters.map((w, i) => this.getEventHandlerForWord(i));
     this.gestureHandler = Animated.event([
       {
         nativeEvent: event => {
@@ -157,11 +157,7 @@ export default class CircleOfWords extends Component {
     ]);
 
     this.wordBackgroundColors = this.wordDimensions.map(wd => {
-      return interpolate(wd.isHighlighted, {
-        inputRange: [0, 1],
-        outputRange: [Animated.color(0, 0, 0, 0), Animated.color(188, 133, 163, 1)],
-        extrapolate: Extrapolate.CLAMP,
-      });
+      return cond(wd.isConnected, Animated.color(188, 133, 163, 1), Animated.color(0, 0, 0, 0));
     });
   }
 
@@ -195,6 +191,14 @@ export default class CircleOfWords extends Component {
     });
   };
 
+  allNodesConnected = () => {
+    return and.apply(null, this.wordDimensions.map(w => w.isConnected));
+  };
+
+  anyNodeNotConnected = () => {
+    return not(this.allNodesConnected());
+  };
+
   // If ALL letter nodes are connected
   //   call onSubmitAnswer
   // Else
@@ -208,7 +212,33 @@ export default class CircleOfWords extends Component {
       return set(lineEnd.y, this.wordDimensions[i].centreY);
     });
 
-    return cond(eq(state, State.END), [...resetLineEndsX, ...resetLineEndsY]);
+    const resetIsConnected = this.wordDimensions.map(wd => {
+      return set(wd.isConnected, new Value(false));
+    });
+
+    return cond(
+      eq(state, State.END),
+      cond(
+        this.allNodesConnected(),
+        [
+          call([], () => this.onSubmitAnswer()),
+          ...resetLineEndsX,
+          ...resetLineEndsY,
+          ...resetIsConnected,
+          set(this.originIndexValue, new Value(null)),
+          set(this.currentIndexValue, new Value(null)),
+          call([], () => this.onResetLetterChain()),
+        ],
+        [
+          ...resetLineEndsX,
+          ...resetLineEndsY,
+          ...resetIsConnected,
+          set(this.originIndexValue, new Value(null)),
+          set(this.currentIndexValue, new Value(null)),
+          call([], () => this.onResetLetterChain()),
+        ],
+      ),
+    );
   };
 
   // If the drag goes into another word
@@ -216,17 +246,25 @@ export default class CircleOfWords extends Component {
   //   Update currentIndex to index of that word
   onDragOverAnotherWord = ({ absoluteX, absoluteY, state }) => {
     const onDragOverConds = this.wordDimensions.map(wd => {
-      return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
-        // [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
-        set(this.currentIndexValue, new Value(wd.index)),
-      ]);
+      return cond(
+        and(not(wd.isConnected), valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated)),
+        [
+          [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
+          set(this.currentIndexValue, new Value(wd.index)),
+          set(wd.isConnected, new Value(true)),
+          call([], () => this.onAddToLetterChain(wd.index)),
+        ],
+      );
     });
 
-    return cond(eq(state, State.ACTIVE), onDragOverConds);
+    return cond(and(eq(state, State.ACTIVE), this.anyNodeNotConnected()), onDragOverConds);
   };
 
   updateLinePositionOnDrag = ({ translationX, translationY, state }) => {
-    return cond(eq(state, State.ACTIVE), this.setLineEndPositionOnDrag(translationX, translationY));
+    return cond(
+      and(eq(state, State.ACTIVE), this.anyNodeNotConnected()),
+      this.setLineEndPositionOnDrag(translationX, translationY),
+    );
   };
 
   // Check what letter node the gesture is inside, set that index as origin and current
@@ -235,26 +273,29 @@ export default class CircleOfWords extends Component {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
         set(this.originIndexValue, new Value(wd.index)),
         set(this.currentIndexValue, new Value(wd.index)),
+        set(wd.isConnected, new Value(true)),
+        call([], () => this.onInitLetterChain(wd.index)),
       ]);
     });
 
     return cond(eq(state, State.BEGAN), setOriginIndex);
   };
 
-  // getEventHandlerForWord = index => {
-  //   return Animated.event([
-  //     {
-  //       nativeEvent: event => {
-  //         return block([
-  //           this.onDragBegin(index, event),
-  //           this.updateLinePositionOnDrag(event),
-  //           this.onDragOverAnotherWord(event),
-  //           this.onDragEnd(event),
-  //         ]);
-  //       },
-  //     },
-  //   ]);
-  // };
+  onSubmitAnswer = () => {
+    console.log(">>> onSubmitAnswer: ", this.letterChain);
+  };
+
+  onInitLetterChain = index => {
+    this.letterChain = [index];
+  };
+
+  onAddToLetterChain = index => {
+    this.letterChain.push(index);
+  };
+
+  onResetLetterChain = index => {
+    this.letterChain = [];
+  };
 
   onCircleLayout = event => {
     const { x, y } = event.nativeEvent.layout;
