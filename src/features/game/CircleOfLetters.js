@@ -27,7 +27,7 @@ import { Svg, Line, Defs, LinearGradient, Stop } from "react-native-svg";
 import { cloneDeep, capitalize } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
-import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
+import { LargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import {
   containerColors,
@@ -56,7 +56,7 @@ const SvgContainer = styled(View)`
 
 const DIAMETER = screenWidth - 160;
 const RADIUS = DIAMETER / 2;
-const LETTER_SIZE = 70;
+const LETTER_SIZE = 110;
 
 const OVERLAY_BUFFER = LETTER_SIZE + 20;
 const OVERLAY_SIZE = DIAMETER + OVERLAY_BUFFER;
@@ -91,7 +91,7 @@ const WordContainer = styled(Animated.View)`
 // TODO: decide on fixed or dynamic width
 // (if using fixed can remove onLayout logic to check width)
 
-const WordText = styled(MediumLargeText)`
+const WordText = styled(LargeText)`
   padding-top: ${TEXT_TOP_PADDING};
 `;
 
@@ -117,6 +117,8 @@ const getInitialWordState = letters => {
   });
 };
 
+const NULL_VALUE = 999;
+
 export default class CircleOfWords extends Component {
   constructor(props) {
     super(props);
@@ -132,8 +134,10 @@ export default class CircleOfWords extends Component {
       isConnected: new Value(false),
     }));
 
-    this.originIndexValue = new Value(null);
-    this.currentIndexValue = new Value(null);
+    this.originIndexValue = new Value(NULL_VALUE);
+    this.currentIndexValue = new Value(NULL_VALUE);
+    this.previousIndexValue = new Value(NULL_VALUE);
+    this.letterChainValues = [];
     this.letterChain = [];
 
     this.state = {
@@ -216,27 +220,22 @@ export default class CircleOfWords extends Component {
       return set(wd.isConnected, new Value(false));
     });
 
+    const resetStates = [
+      ...resetLineEndsX,
+      ...resetLineEndsY,
+      ...resetIsConnected,
+      set(this.originIndexValue, new Value(NULL_VALUE)),
+      set(this.currentIndexValue, new Value(NULL_VALUE)),
+      set(this.previousIndexValue, new Value(NULL_VALUE)),
+      call([], () => this.onResetLetterChain()),
+    ];
+
     return cond(
       eq(state, State.END),
       cond(
         this.allNodesConnected(),
-        [
-          call([], () => this.onSubmitAnswer()),
-          ...resetLineEndsX,
-          ...resetLineEndsY,
-          ...resetIsConnected,
-          set(this.originIndexValue, new Value(null)),
-          set(this.currentIndexValue, new Value(null)),
-          call([], () => this.onResetLetterChain()),
-        ],
-        [
-          ...resetLineEndsX,
-          ...resetLineEndsY,
-          ...resetIsConnected,
-          set(this.originIndexValue, new Value(null)),
-          set(this.currentIndexValue, new Value(null)),
-          call([], () => this.onResetLetterChain()),
-        ],
+        [call([], () => this.onSubmitAnswer()), [...resetStates]],
+        [...resetStates],
       ),
     );
   };
@@ -250,6 +249,7 @@ export default class CircleOfWords extends Component {
         and(not(wd.isConnected), valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated)),
         [
           [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
+          set(this.previousIndexValue, this.currentIndexValue),
           set(this.currentIndexValue, new Value(wd.index)),
           set(wd.isConnected, new Value(true)),
           call([], () => this.onAddToLetterChain(wd.index)),
@@ -291,6 +291,10 @@ export default class CircleOfWords extends Component {
 
   onAddToLetterChain = index => {
     this.letterChain.push(index);
+  };
+
+  onRemoveFromLetterChain = index => {
+    this.letterChain.pop();
   };
 
   onResetLetterChain = index => {
@@ -371,7 +375,7 @@ export default class CircleOfWords extends Component {
                 y1={circlePositionY + w.centreY}
                 y2={this.lineEnds[w.index].y}
                 stroke={colors.selectedColor}
-                strokeWidth="7"
+                strokeWidth="10"
               />
             ))}
           </Svg>
