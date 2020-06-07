@@ -34,11 +34,11 @@ const levels = [
 
 const levels2 = [
   {
-    clueImage: "small.png",
-    text: "small",
+    clueText: "The opposite of cloudy",
+    text: "sunny",
   },
   {
-    clueImage: "large.png",
+    clueText: "large.png",
     text: "large",
   },
 ];

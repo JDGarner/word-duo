@@ -1,1 +1,1 @@
-export const BUFFER_AMOUNT = 15;
+export const BUFFER_AMOUNT = 5;

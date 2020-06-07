@@ -9,7 +9,6 @@ import { screenHeight, screenWidth } from "../../utils/sizing-utils";
 import { MediumLargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import {
-  containerColors,
   getCircleCoordinatesForAngle,
   valueNotInsideAnyBounds,
   getAbsoluteCoordinatesWithBuffer,
@@ -20,7 +19,25 @@ const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 
-const { set, cond, block, eq, add, and, or, call, Value } = Animated;
+const {
+  set,
+  cond,
+  block,
+  eq,
+  add,
+  and,
+  or,
+  call,
+  timing,
+  interpolate,
+  Extrapolate,
+  Value,
+  clockRunning,
+  startClock,
+  stopClock,
+  debug,
+  Clock,
+} = Animated;
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -38,6 +55,14 @@ const SvgContainer = styled(View)`
 const DIAMETER = screenWidth - 160;
 const RADIUS = DIAMETER / 2;
 
+const GameOverlay = styled(View)`
+  position: absolute;
+  height: ${DIAMETER + 120};
+  width: 95%;
+  border-radius: 25;
+  background-color: ${colors.gameOverlayBackground};
+`;
+
 const Circle = styled(View)`
   height: ${DIAMETER};
   width: ${DIAMETER};
@@ -51,7 +76,7 @@ const WordContainer = styled(Animated.View)`
   position: absolute;
   top: ${({ y }) => y};
   left: ${({ x }) => x};
-  background-color: ${({ color }) => color};
+  /* background-color: ${({ bgColor }) => bgColor}; */
   border-radius: 26;
   width: 145;
 `;
@@ -64,12 +89,13 @@ const WordText = styled(MediumLargeText)`
   padding-bottom: 5;
 `;
 
+const INCREASE_SCALE_FACTOR = 1.1;
+const DECREASE_OPACITY_FACTOR = 0;
+
 const getInitialWordState = words => {
   return words.map((w, i) => {
     return {
       text: w.text,
-      color: containerColors[i],
-      matchedColor: containerColors[i],
       index: i,
       width: null,
       height: null,
@@ -100,10 +126,8 @@ export default class CircleOfWords extends Component {
       y2Value: new Value(0),
       index: i,
       isMatched: new Value(false),
-      scaleValue: new Value(1),
+      isHighlighted: new Value(0),
     }));
-
-    this.scaleValueIncrease = new Value(0.2);
 
     this.state = {
       wordState: getInitialWordState(this.props.words),
@@ -113,6 +137,18 @@ export default class CircleOfWords extends Component {
     };
 
     this.panHandlers = this.props.words.map((w, i) => this.getEventHandlerForWord(i));
+
+    this.wordBackgroundColors = this.wordDimensions.map(wd => {
+      return interpolate(wd.isHighlighted, {
+        inputRange: [0, 1],
+        outputRange: [Animated.color(0, 0, 0, 0), Animated.color(188, 133, 163, 1)],
+        extrapolate: Extrapolate.CLAMP,
+      });
+    });
+
+    // this.clock = new Clock();
+    // animation = new Value(0);
+    // transX = runTiming(this.clock, this.progress, this.animation);
   }
 
   onMatchWords = (originWord, destinationWord) => {
@@ -122,7 +158,7 @@ export default class CircleOfWords extends Component {
 
     originWordState.isMatched = true;
     destinationWordState.isMatched = true;
-    originWordState.matchedColor = destinationWordState.color;
+    // originWordState.matchedColor = destinationWordState.bgColor;
     originWordState.originWordX = originWordState.centreX / DIAMETER;
     originWordState.originWordY = originWordState.centreY / DIAMETER;
     originWordState.matchedWordX = destinationWordState.centreX / DIAMETER;
@@ -163,12 +199,12 @@ export default class CircleOfWords extends Component {
               cond(eq(state, State.ACTIVE), [
                 set(this.lineEnds[index].x, wd.centreX),
                 set(this.lineEnds[index].y, wd.centreY),
-                set(wd.scaleValue, new Value(1.2)),
+                set(wd.isHighlighted, new Value(1)),
               ]),
               // If drag is inside another word and ENDED -> MATCH IT
-              cond(eq(state, State.END), call([], () => this.onMatchedSomeWord(wd, index))),
+              cond(eq(state, State.END), [call([], () => this.onMatchedSomeWord(wd, index))]),
             ],
-            cond(eq(state, State.ACTIVE), set(wd.scaleValue, new Value(1))),
+            cond(eq(state, State.ACTIVE), set(wd.isHighlighted, new Value(0))),
           ),
         );
       });
@@ -198,7 +234,7 @@ export default class CircleOfWords extends Component {
         eq(this.wordDimensions[index].isMatched, false),
         valueNotInsideAnyBounds({ x: absoluteX, y: absoluteY }, filtered, Animated),
       ),
-      set(this.wordDimensions[index].scaleValue, new Value(1)),
+      set(this.wordDimensions[index].isHighlighted, new Value(0)),
     );
   };
 
@@ -212,7 +248,7 @@ export default class CircleOfWords extends Component {
   updateScaleOnDrag = (index, { state }) => {
     return cond(
       or(eq(state, State.BEGAN), eq(state, State.ACTIVE)),
-      set(this.wordDimensions[index].scaleValue, new Value(1.2)),
+      set(this.wordDimensions[index].isHighlighted, new Value(1)),
     );
   };
 
@@ -295,6 +331,7 @@ export default class CircleOfWords extends Component {
 
     return (
       <ContentContainer>
+        <GameOverlay />
         <SvgContainer>
           <Svg height={screenHeight} width={screenWidth}>
             <Defs>
@@ -306,8 +343,8 @@ export default class CircleOfWords extends Component {
                   x2={w.matchedWordX || 0}
                   y2={w.matchedWordY || 0}
                   key={`${w.text}=def`}>
-                  <Stop offset="0" stopColor={w.color} stopOpacity="1" />
-                  <Stop offset="1" stopColor={w.matchedColor} stopOpacity="1" />
+                  <Stop offset="0" stopColor={colors.selectedColor} stopOpacity="1" />
+                  <Stop offset="1" stopColor={colors.selectedColor} stopOpacity="1" />
                 </LinearGradient>
               ))}
             </Defs>
@@ -325,26 +362,30 @@ export default class CircleOfWords extends Component {
           </Svg>
         </SvgContainer>
         <Circle onLayout={this.onCircleLayout}>
-          {wordState.map(w => (
-            <WordContainer
-              onLayout={e => this.onWordLayout(e, w)}
-              x={w.x || 0}
-              y={w.y || 0}
-              color={w.color}
-              style={{ transform: [{ scale: this.wordDimensions[w.index].scaleValue }] }}>
-              <PanGestureHandler
-                enabled={!w.isMatched}
-                minDist={0}
-                onGestureEvent={this.panHandlers[w.index]}
-                onHandlerStateChange={this.panHandlers[w.index]}>
-                <Animated.View>
-                  <WordText fontWeight="600" color={colors.wordColor}>
-                    {capitalize(w.text)}
-                  </WordText>
-                </Animated.View>
-              </PanGestureHandler>
-            </WordContainer>
-          ))}
+          {wordState.map(w => {
+            const containerStyle = [{ backgroundColor: this.wordBackgroundColors[w.index] }];
+
+            return (
+              <WordContainer
+                onLayout={e => this.onWordLayout(e, w)}
+                x={w.x || 0}
+                y={w.y || 0}
+                style={containerStyle}
+                bgColor={w.bgColor}>
+                <PanGestureHandler
+                  enabled={!w.isMatched}
+                  minDist={0}
+                  onGestureEvent={this.panHandlers[w.index]}
+                  onHandlerStateChange={this.panHandlers[w.index]}>
+                  <Animated.View>
+                    <WordText fontWeight="600" color={colors.wordColor}>
+                      {capitalize(w.text)}
+                    </WordText>
+                  </Animated.View>
+                </PanGestureHandler>
+              </WordContainer>
+            );
+          })}
         </Circle>
       </ContentContainer>
     );

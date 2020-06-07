@@ -12,17 +12,6 @@ const getMiddleColor = (color1, color2) => {
   return `rgba(${middle[0]}, ${middle[1]}, ${middle[2]}, 1)`;
 };
 
-export const containerColors = [
-  "rgba(234,82,60,1)",
-  "rgba(234,190,60,1)",
-  "rgba(57,188,218,1)",
-  "rgba(147,205,74,1)",
-  "rgba(246,167,193,1)",
-  "rgba(175,110,78,1)",
-  "rgba(56,144,143,1)",
-  "rgba(188,133,163,1)",
-];
-
 export const toRadians = deg => deg * (Math.PI / 180);
 
 export const getCircleCoordinatesForAngle = (angle, radius) => {
@@ -51,7 +40,7 @@ export const getAbsoluteCoordinatesWithBuffer = (initialOffset, box) => {
   };
 };
 
-const valueInsideBoundsOnly = (
+export const valueInsideBounds = (
   { x, y },
   { x1Value: x1, y1Value: y1, x2Value: x2, y2Value: y2 },
   { and, lessThan, greaterThan },
@@ -59,12 +48,12 @@ const valueInsideBoundsOnly = (
   return and(and(greaterThan(x, x1), lessThan(x, x2)), and(greaterThan(y, y1), lessThan(y, y2)));
 };
 
-export const valueInsideBounds = ({ x, y }, bounds, Animated) => {
-  return Animated.and(
-    Animated.eq(bounds.isMatched, false),
-    valueInsideBoundsOnly({ x, y }, bounds, Animated),
-  );
-};
+// export const valueInsideBounds = ({ x, y }, bounds, Animated) => {
+//   return Animated.and(
+//     Animated.eq(bounds.isMatched, false),
+//     valueInsideBoundsOnly({ x, y }, bounds, Animated),
+//   );
+// };
 
 export const valueInsideAnyBounds = ({ x, y }, allBounds, Animated) => {
   return Animated.or.apply(null, allBounds.map(b => valueInsideBounds({ x, y }, b, Animated)));

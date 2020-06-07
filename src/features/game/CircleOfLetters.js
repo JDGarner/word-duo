@@ -8,31 +8,23 @@ import Animated, {
   eq,
   add,
   and,
-  or,
   not,
   call,
-  timing,
   interpolate,
   Extrapolate,
   Value,
-  lessThan,
-  greaterOrEq,
-  clockRunning,
-  startClock,
-  stopClock,
-  debug,
   Clock,
+  Easing,
 } from "react-native-reanimated";
-import { Svg, Line, Defs, LinearGradient, Stop } from "react-native-svg";
-import { cloneDeep, capitalize } from "lodash";
+import { Svg, Line } from "react-native-svg";
+import { cloneDeep } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
 import { LargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
+import { runTiming } from "./timing";
 import colors from "../../theme/colors";
 import {
-  containerColors,
   getCircleCoordinatesForAngle,
-  valueNotInsideAnyBounds,
   getAbsoluteCoordinatesWithBuffer,
   valueInsideBounds,
 } from "./game-utils";
@@ -46,6 +38,8 @@ const ContentContainer = styled(View)`
   align-items: center;
   justify-content: center;
   width: 100%;
+  /* border-width: 1;
+  border-color: blue; */
 `;
 
 const SvgContainer = styled(View)`
@@ -54,42 +48,50 @@ const SvgContainer = styled(View)`
   position: absolute;
 `;
 
-const DIAMETER = screenWidth - 160;
-const RADIUS = DIAMETER / 2;
-const LETTER_SIZE = 110;
+const OUTER_DIAMETER = screenWidth - 50;
+const LETTER_BUFFER = 30;
 
-const OVERLAY_BUFFER = LETTER_SIZE + 20;
-const OVERLAY_SIZE = DIAMETER + OVERLAY_BUFFER;
+// TODO: hit slop needs to be higher for when there are less letters
+// TODO: font size needs to be smaller for more letters
+const getDimensions = numOfLetters => {
+  const letterSize = (OUTER_DIAMETER / numOfLetters) * 1.4;
+  const letterBuffer = letterSize + LETTER_BUFFER;
+  const innerDiameter = OUTER_DIAMETER - letterBuffer;
+
+  return {
+    letterSize,
+    innerDiameter,
+    innerRadius: innerDiameter / 2,
+  };
+};
 
 const GameOverlay = styled(View)`
   position: absolute;
-  height: ${OVERLAY_SIZE};
-  width: ${OVERLAY_SIZE};
-  border-radius: ${OVERLAY_SIZE / 2};
+  height: ${OUTER_DIAMETER};
+  width: ${OUTER_DIAMETER};
+  border-radius: ${OUTER_DIAMETER / 2};
   background-color: ${colors.gameOverlayBackground};
 `;
 
 const Circle = styled(View)`
-  height: ${DIAMETER};
-  width: ${DIAMETER};
+  position: relative;
+  height: ${({ diameter }) => diameter};
+  width: ${({ diameter }) => diameter};
+  border-radius: ${({ radius }) => radius};
   /* border-width: 1;
   border-color: red; */
-  position: relative;
-  border-radius: ${RADIUS};
 `;
 
 const WordContainer = styled(Animated.View)`
   position: absolute;
   top: ${({ y }) => y};
   left: ${({ x }) => x};
-  border-radius: ${LETTER_SIZE / 2};
-  width: ${LETTER_SIZE};
-  height: ${LETTER_SIZE};
+  border-radius: ${({ letterSize }) => letterSize / 2};
+  width: ${({ letterSize }) => letterSize};
+  height: ${({ letterSize }) => letterSize};
   align-items: center;
   justify-content: center;
 `;
-// TODO: decide on fixed or dynamic width
-// (if using fixed can remove onLayout logic to check width)
 
 const WordText = styled(LargeText)`
   padding-top: ${TEXT_TOP_PADDING};
@@ -99,8 +101,6 @@ const getInitialWordState = letters => {
   return letters.map((w, i) => {
     return {
       text: w,
-      // bgColor: containerColors[i],
-      // matchedColor: containerColors[i],
       index: i,
       width: null,
       height: null,
@@ -131,8 +131,10 @@ export default class CircleOfWords extends Component {
       y1Value: new Value(0),
       y2Value: new Value(0),
       index: i,
-      isConnected: new Value(false),
+      isConnected: new Value(0),
     }));
+
+    this.clock = new Clock();
 
     this.originIndexValue = new Value(NULL_VALUE);
     this.currentIndexValue = new Value(NULL_VALUE);
@@ -140,11 +142,20 @@ export default class CircleOfWords extends Component {
     this.letterChainValues = [];
     this.letterChain = [];
 
+    const { letterSize, innerDiameter, innerRadius } = getDimensions(this.props.letters.length);
+
     this.state = {
       wordState: getInitialWordState(this.props.letters),
       circlePositionX: null,
       circlePositionY: null,
+      // containerPositionX: null,
+      // containerPositionY: null,
+      // initialOffsetX: null,
+      // initialOffsetY: null,
       allPositionsSet: false,
+      letterSize,
+      innerDiameter,
+      innerRadius,
     };
 
     this.gestureHandler = Animated.event([
@@ -160,10 +171,49 @@ export default class CircleOfWords extends Component {
       },
     ]);
 
+    // this.wordBackgroundColors = this.wordDimensions.map(wd => {
+    //   return cond(wd.isConnected, Animated.color(188, 133, 163, 1), Animated.color(0, 0, 0, 0));
+    // });
+
     this.wordBackgroundColors = this.wordDimensions.map(wd => {
-      return cond(wd.isConnected, Animated.color(188, 133, 163, 1), Animated.color(0, 0, 0, 0));
+      return interpolate(wd.isConnected, {
+        inputRange: [0, 1],
+        outputRange: [Animated.color(0, 0, 0, 0), Animated.color(188, 133, 163, 1)],
+        extrapolate: Extrapolate.CLAMP,
+      });
     });
   }
+
+  // TODO: update dimensions when letters length changes
+  // static getDerivedStateFromProps(props, state) {
+  //   if (props.letters.length !== this.props.letters.length) {
+  //     return {
+  //     };
+  //   }
+  //   return null;
+  // }
+
+  animateWordAddHighlight = wd => {
+    return set(
+      wd.isConnected,
+      runTiming(this.clock, wd.isConnected, {
+        duration: 2000,
+        toValue: new Value(1),
+        easing: Easing.inOut(Easing.ease),
+      }),
+    );
+  };
+
+  animateWordRemoveHighlight = wd => {
+    return set(
+      wd.isConnected,
+      runTiming(this.clock, wd.isConnected, {
+        duration: 2000,
+        toValue: new Value(0),
+        easing: Easing.inOut(Easing.ease),
+      }),
+    );
+  };
 
   // Find the line end that matches current index value, update it's position
   setLineEndPositionOnDrag = (translationX, translationY) => {
@@ -196,17 +246,15 @@ export default class CircleOfWords extends Component {
   };
 
   allNodesConnected = () => {
-    return and.apply(null, this.wordDimensions.map(w => w.isConnected));
+    return and.apply(null, this.wordDimensions.map(w => eq(w.isConnected, new Value(1))));
   };
 
   anyNodeNotConnected = () => {
     return not(this.allNodesConnected());
   };
 
-  // If ALL letter nodes are connected
-  //   call onSubmitAnswer
-  // Else
-  //   reset all Line End positions to their respective centres
+  // If ALL letter nodes are connected -> call onSubmitAnswer
+  // Else -> reset all line end positions
   onDragEnd = ({ state }) => {
     const resetLineEndsX = this.lineEnds.map((lineEnd, i) => {
       return set(lineEnd.x, this.wordDimensions[i].centreX);
@@ -217,7 +265,7 @@ export default class CircleOfWords extends Component {
     });
 
     const resetIsConnected = this.wordDimensions.map(wd => {
-      return set(wd.isConnected, new Value(false));
+      return set(wd.isConnected, new Value(0));
     });
 
     const resetStates = [
@@ -246,12 +294,15 @@ export default class CircleOfWords extends Component {
   onDragOverAnotherWord = ({ absoluteX, absoluteY, state }) => {
     const onDragOverConds = this.wordDimensions.map(wd => {
       return cond(
-        and(not(wd.isConnected), valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated)),
+        and(
+          eq(wd.isConnected, new Value(0)),
+          valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated),
+        ),
         [
           [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
           set(this.previousIndexValue, this.currentIndexValue),
           set(this.currentIndexValue, new Value(wd.index)),
-          set(wd.isConnected, new Value(true)),
+          set(wd.isConnected, new Value(1)),
           call([], () => this.onAddToLetterChain(wd.index)),
         ],
       );
@@ -273,7 +324,8 @@ export default class CircleOfWords extends Component {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
         set(this.originIndexValue, new Value(wd.index)),
         set(this.currentIndexValue, new Value(wd.index)),
-        set(wd.isConnected, new Value(true)),
+        // set(wd.isConnected, new Value(1)),
+        // this.animateWordAddHighlight(wd),
         call([], () => this.onInitLetterChain(wd.index)),
       ]);
     });
@@ -303,8 +355,15 @@ export default class CircleOfWords extends Component {
 
   onCircleLayout = event => {
     const { x, y } = event.nativeEvent.layout;
+    console.log(">>> circle: ", x, y);
     this.setState({ circlePositionX: x, circlePositionY: y }, this.onLayoutUpdate);
   };
+
+  // onContainerLayout = event => {
+  //   const { x, y } = event.nativeEvent.layout;
+  //   console.log(">>> container: ", x, y);
+  //   this.setState({ containerPositionX: x, containerPositionY: y }, this.onLayoutUpdate);
+  // };
 
   onWordLayout = (event, word) => {
     const { width, height } = event.nativeEvent.layout;
@@ -316,22 +375,34 @@ export default class CircleOfWords extends Component {
 
   // Word/Circle positions have changed, update the state about their positions
   onLayoutUpdate = () => {
-    const { allPositionsSet, wordState, circlePositionX, circlePositionY } = this.state;
+    const {
+      allPositionsSet,
+      wordState,
+      circlePositionX,
+      circlePositionY,
+      containerPositionX,
+      containerPositionY,
+      innerRadius,
+    } = this.state;
 
-    if (!allPositionsSet && wordState.every(w => w.width) && circlePositionX && circlePositionY) {
+    const initialOffsetX = circlePositionX + containerPositionX;
+    const initialOffsetY = circlePositionY + containerPositionY;
+    this.setState({ initialOffsetX, initialOffsetY });
+
+    if (!allPositionsSet && wordState.every(w => w.width) && circlePositionX) {
       this.setState({ allPositionsSet: true });
 
       const clonedWordState = cloneDeep(wordState);
 
       clonedWordState.forEach((w, i) => {
-        const { xCoord, yCoord } = getCircleCoordinatesForAngle(w.angle, RADIUS);
+        const { xCoord, yCoord } = getCircleCoordinatesForAngle(w.angle, innerRadius);
         const halfWidth = w.width / 2;
         const halfHeight = w.height / 2;
-        const startingX = RADIUS - halfWidth;
+        const startingX = innerRadius - halfWidth;
         const startingY = -1 * halfHeight;
         clonedWordState[i] = {
           ...w,
-          centreX: xCoord + RADIUS,
+          centreX: xCoord + innerRadius,
           centreY: yCoord,
           x: startingX + xCoord,
           y: startingY + yCoord,
@@ -360,7 +431,14 @@ export default class CircleOfWords extends Component {
   };
 
   render() {
-    const { wordState, circlePositionX, circlePositionY } = this.state;
+    const {
+      wordState,
+      circlePositionX,
+      circlePositionY,
+      letterSize,
+      innerDiameter,
+      innerRadius,
+    } = this.state;
 
     return (
       <ContentContainer>
@@ -380,7 +458,7 @@ export default class CircleOfWords extends Component {
             ))}
           </Svg>
         </SvgContainer>
-        <Circle onLayout={this.onCircleLayout}>
+        <Circle onLayout={this.onCircleLayout} diameter={innerDiameter} radius={innerRadius}>
           <PanGestureHandler
             minDist={0}
             onGestureEvent={this.gestureHandler}
@@ -392,6 +470,7 @@ export default class CircleOfWords extends Component {
                 return (
                   <WordContainer
                     onLayout={e => this.onWordLayout(e, w)}
+                    letterSize={letterSize}
                     x={w.x || 0}
                     y={w.y || 0}
                     style={containerStyle}>

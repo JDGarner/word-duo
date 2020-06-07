@@ -13,17 +13,11 @@ const Background = styled(View)`
 const AppBackground = ({ children }) => {
   return (
     <Background>
-      <ImageBackground style={{ flex: 1, resizeMode: "cover" }} source={require("./jellyfish.jpg")}>
+      <ImageBackground style={{ flex: 1, resizeMode: "cover" }} source={require("./canyon.jpg")}>
         <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>
       </ImageBackground>
     </Background>
   );
-
-  // return (
-  //   <LinearGradient colors={["#fffbf7", "#ffe9e9"]} style={{ flex: 1 }}>
-  //     <SafeAreaView style={{ flex: 1 }}>{children}</SafeAreaView>
-  //   </LinearGradient>
-  // );
 };
 
 export default AppBackground;
