@@ -23,11 +23,11 @@ const ClueText = styled(MediumLargerText)`
   padding-bottom: 7;
 `;
 
-const Clue = () => {
+const Clue = ({ text }) => {
   return (
     <ClueContainer>
       <ClueBackground>
-        <ClueText>The opposite of cloudy</ClueText>
+        <ClueText>{text}</ClueText>
       </ClueBackground>
     </ClueContainer>
   );

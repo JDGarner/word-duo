@@ -1,4 +1,4 @@
-import { ON_ALL_WORDS_MATCHED } from "./game-actions";
+import { ON_CORRECT_ANSWER } from "./game-actions";
 import levels from "../../../mock-data/levels";
 import { formatLevels } from "./game-redux-utils";
 
@@ -6,8 +6,9 @@ const formattedLevels = formatLevels(levels);
 
 const initialState = {
   levels: formattedLevels,
-  // currentWords: shuffle(formattedLevels[0].words),
   currentLetters: formattedLevels[0].letters,
+  currentClue: formattedLevels[0].clueText,
+  correctAnswer: formattedLevels[0].text,
   levelIndex: 0,
 };
 
@@ -15,19 +16,20 @@ export default (state = initialState, action) => {
   const { type } = action;
 
   switch (type) {
-    case ON_ALL_WORDS_MATCHED: {
+    case ON_CORRECT_ANSWER: {
       let levelIndex = state.levelIndex + 1;
       if (levelIndex >= levels.length) {
         levelIndex = 0;
       }
 
-      // const currentWords = shuffle(cloneDeep(state.levels[levelIndex].words));
-      const currentLetters = [...state.levels[levelIndex].letters];
+      const currentLevel = state.levels[levelIndex];
+      const currentLetters = [...currentLevel.letters];
 
       return {
         ...state,
-        // currentWords,
         currentLetters,
+        currentClue: currentLevel.clueText,
+        correctAnswer: currentLevel.text,
         levelIndex,
       };
     }

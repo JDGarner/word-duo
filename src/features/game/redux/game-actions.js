@@ -1,7 +1,7 @@
 const NAMESPACE = "GAME";
 
-export const ON_ALL_WORDS_MATCHED = `${NAMESPACE}/ON_ALL_WORDS_MATCHED`;
+export const ON_CORRECT_ANSWER = `${NAMESPACE}/ON_CORRECT_ANSWER`;
 
-export const onAllWordsMatched = () => ({
-  type: ON_ALL_WORDS_MATCHED,
+export const onCorrectAnswer = () => ({
+  type: ON_CORRECT_ANSWER,
 });

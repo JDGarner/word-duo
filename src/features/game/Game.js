@@ -2,7 +2,7 @@ import React from "react";
 import { View, Image } from "react-native";
 import styled from "styled-components";
 import CircleOfLetters from "./CircleOfLetters";
-import Hint from "./Clue";
+import Clue from "./Clue";
 import { MediumLargerText } from "../../components/text/Text";
 
 const ContentContainer = styled(View)`
@@ -21,11 +21,6 @@ const TopHalfArea = styled(View)`
   position: absolute;
 `;
 
-const TestContainer = styled(View)`
-  margin-top: auto;
-  margin-bottom: 0;
-`;
-
 const BottomHalfArea = styled(View)`
   flex: 1;
   align-items: center;
@@ -35,17 +30,19 @@ const BottomHalfArea = styled(View)`
   position: absolute;
 `;
 
-const Game = ({ letters, levelIndex, onAllWordsMatched }) => {
+const Game = ({ letters, clueText, correctAnswer, levelIndex, onCorrectAnswer }) => {
   return (
     <ContentContainer>
       <TopHalfArea>
-        <Hint />
-        {/* <TestContainer>
-          <MediumLargerText>Test</MediumLargerText>
-        </TestContainer> */}
+        <Clue text={clueText} />
       </TopHalfArea>
       <BottomHalfArea>
-        <CircleOfLetters key={levelIndex} letters={letters} onAllWordsMatched={onAllWordsMatched} />
+        <CircleOfLetters
+          key={levelIndex}
+          letters={letters}
+          correctAnswer={correctAnswer}
+          onCorrectAnswer={onCorrectAnswer}
+        />
       </BottomHalfArea>
     </ContentContainer>
   );

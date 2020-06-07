@@ -19,7 +19,7 @@ import { Svg, Line } from "react-native-svg";
 import { cloneDeep } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
-import { LargeText, TEXT_TOP_PADDING, MediumLargerText } from "../../components/text/Text";
+import { LargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import {
   getCircleCoordinatesForAngle,
@@ -315,7 +315,11 @@ export default class CircleOfWords extends Component {
   };
 
   onSubmitAnswer = () => {
-    console.log(">>> onSubmitAnswer: ", this.state.letterChain);
+    const answer = this.state.letterChain.map(index => this.props.letters[index]).join("");
+
+    if (answer.toLowerCase() === this.props.correctAnswer.toLowerCase()) {
+      this.props.onCorrectAnswer();
+    }
   };
 
   onInitLetterChain = index => {
