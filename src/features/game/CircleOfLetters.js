@@ -14,14 +14,12 @@ import Animated, {
   Extrapolate,
   Value,
   Clock,
-  Easing,
 } from "react-native-reanimated";
 import { Svg, Line } from "react-native-svg";
 import { cloneDeep } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
 import { LargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
-import { runTiming } from "./timing";
 import colors from "../../theme/colors";
 import {
   getCircleCoordinatesForAngle,
@@ -193,28 +191,6 @@ export default class CircleOfWords extends Component {
   //   return null;
   // }
 
-  animateWordAddHighlight = wd => {
-    return set(
-      wd.isConnected,
-      runTiming(this.clock, wd.isConnected, {
-        duration: 2000,
-        toValue: new Value(1),
-        easing: Easing.inOut(Easing.ease),
-      }),
-    );
-  };
-
-  animateWordRemoveHighlight = wd => {
-    return set(
-      wd.isConnected,
-      runTiming(this.clock, wd.isConnected, {
-        duration: 2000,
-        toValue: new Value(0),
-        easing: Easing.inOut(Easing.ease),
-      }),
-    );
-  };
-
   // Find the line end that matches current index value, update it's position
   setLineEndPositionOnDrag = (translationX, translationY) => {
     return this.lineEnds.map((lineEnd, i) => {
@@ -324,8 +300,7 @@ export default class CircleOfWords extends Component {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
         set(this.originIndexValue, new Value(wd.index)),
         set(this.currentIndexValue, new Value(wd.index)),
-        // set(wd.isConnected, new Value(1)),
-        // this.animateWordAddHighlight(wd),
+        set(wd.isConnected, new Value(1)),
         call([], () => this.onInitLetterChain(wd.index)),
       ]);
     });
