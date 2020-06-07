@@ -19,13 +19,14 @@ import { Svg, Line } from "react-native-svg";
 import { cloneDeep } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
-import { LargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
+import { LargeText, TEXT_TOP_PADDING, MediumLargerText } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import {
   getCircleCoordinatesForAngle,
   getAbsoluteCoordinatesWithBuffer,
   valueInsideBounds,
 } from "./game-utils";
+import CurrentLetters from "./LetterChain";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
@@ -34,10 +35,8 @@ Animated.addWhitelistedNativeProps({ x1: true, x2: true, y1: true, y2: true });
 const ContentContainer = styled(View)`
   flex: 1;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   width: 100%;
-  /* border-width: 1;
-  border-color: blue; */
 `;
 
 const SvgContainer = styled(View)`
@@ -51,17 +50,24 @@ const LETTER_BUFFER = 30;
 
 // TODO: hit slop needs to be higher for when there are less letters
 // TODO: font size needs to be smaller for more letters
+// TODO: fix letter size formula
 const getDimensions = numOfLetters => {
-  const letterSize = (OUTER_DIAMETER / numOfLetters) * 1.4;
+  // const letterSize = (OUTER_DIAMETER / numOfLetters) * 1.4;
+  const letterSize = 90;
   const letterBuffer = letterSize + LETTER_BUFFER;
   const innerDiameter = OUTER_DIAMETER - letterBuffer;
 
   return {
     letterSize,
+    letterBuffer,
     innerDiameter,
     innerRadius: innerDiameter / 2,
   };
 };
+
+const CurrentLettersContainer = styled(View)`
+  margin-bottom: ${({ letterBuffer }) => letterBuffer / 2 + 20};
+`;
 
 const GameOverlay = styled(View)`
   position: absolute;
@@ -78,6 +84,7 @@ const Circle = styled(View)`
   border-radius: ${({ radius }) => radius};
   /* border-width: 1;
   border-color: red; */
+  margin-bottom: ${({ letterBuffer }) => letterBuffer / 2};
 `;
 
 const WordContainer = styled(Animated.View)`
@@ -137,23 +144,22 @@ export default class CircleOfWords extends Component {
     this.originIndexValue = new Value(NULL_VALUE);
     this.currentIndexValue = new Value(NULL_VALUE);
     this.previousIndexValue = new Value(NULL_VALUE);
-    this.letterChainValues = [];
-    this.letterChain = [];
+    // this.letterChainValues = [];
 
-    const { letterSize, innerDiameter, innerRadius } = getDimensions(this.props.letters.length);
+    const { letterSize, letterBuffer, innerDiameter, innerRadius } = getDimensions(
+      this.props.letters.length,
+    );
 
     this.state = {
       wordState: getInitialWordState(this.props.letters),
       circlePositionX: null,
       circlePositionY: null,
-      // containerPositionX: null,
-      // containerPositionY: null,
-      // initialOffsetX: null,
-      // initialOffsetY: null,
       allPositionsSet: false,
       letterSize,
+      letterBuffer,
       innerDiameter,
       innerRadius,
+      letterChain: [],
     };
 
     this.gestureHandler = Animated.event([
@@ -309,36 +315,38 @@ export default class CircleOfWords extends Component {
   };
 
   onSubmitAnswer = () => {
-    console.log(">>> onSubmitAnswer: ", this.letterChain);
+    console.log(">>> onSubmitAnswer: ", this.state.letterChain);
   };
 
   onInitLetterChain = index => {
-    this.letterChain = [index];
+    this.setState({
+      letterChain: [index],
+    });
   };
 
   onAddToLetterChain = index => {
-    this.letterChain.push(index);
+    this.setState({
+      letterChain: [...this.state.letterChain, index],
+    });
   };
 
-  onRemoveFromLetterChain = index => {
-    this.letterChain.pop();
+  onRemoveFromLetterChain = () => {
+    const letterChain = [...this.state.letterChain];
+    this.setState({
+      letterChain: letterChain.pop(),
+    });
   };
 
-  onResetLetterChain = index => {
-    this.letterChain = [];
+  onResetLetterChain = () => {
+    this.setState({
+      letterChain: [],
+    });
   };
 
   onCircleLayout = event => {
     const { x, y } = event.nativeEvent.layout;
-    console.log(">>> circle: ", x, y);
     this.setState({ circlePositionX: x, circlePositionY: y }, this.onLayoutUpdate);
   };
-
-  // onContainerLayout = event => {
-  //   const { x, y } = event.nativeEvent.layout;
-  //   console.log(">>> container: ", x, y);
-  //   this.setState({ containerPositionX: x, containerPositionY: y }, this.onLayoutUpdate);
-  // };
 
   onWordLayout = (event, word) => {
     const { width, height } = event.nativeEvent.layout;
@@ -355,14 +363,8 @@ export default class CircleOfWords extends Component {
       wordState,
       circlePositionX,
       circlePositionY,
-      containerPositionX,
-      containerPositionY,
       innerRadius,
     } = this.state;
-
-    const initialOffsetX = circlePositionX + containerPositionX;
-    const initialOffsetY = circlePositionY + containerPositionY;
-    this.setState({ initialOffsetX, initialOffsetY });
 
     if (!allPositionsSet && wordState.every(w => w.width) && circlePositionX) {
       this.setState({ allPositionsSet: true });
@@ -411,13 +413,20 @@ export default class CircleOfWords extends Component {
       circlePositionX,
       circlePositionY,
       letterSize,
+      letterBuffer,
       innerDiameter,
       innerRadius,
+      letterChain,
     } = this.state;
+
+    const currentLetters = letterChain.map(index => this.props.letters[index]).join("");
 
     return (
       <ContentContainer>
         <GameOverlay />
+        <CurrentLettersContainer letterBuffer={letterBuffer}>
+          <CurrentLetters text={currentLetters} />
+        </CurrentLettersContainer>
         <SvgContainer>
           <Svg height={screenHeight} width={screenWidth}>
             {wordState.map((w, i) => (
@@ -433,7 +442,11 @@ export default class CircleOfWords extends Component {
             ))}
           </Svg>
         </SvgContainer>
-        <Circle onLayout={this.onCircleLayout} diameter={innerDiameter} radius={innerRadius}>
+        <Circle
+          onLayout={this.onCircleLayout}
+          diameter={innerDiameter}
+          radius={innerRadius}
+          letterBuffer={letterBuffer}>
           <PanGestureHandler
             minDist={0}
             onGestureEvent={this.gestureHandler}
