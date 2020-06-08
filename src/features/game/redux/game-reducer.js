@@ -10,6 +10,7 @@ const initialState = {
   currentClue: formattedLevels[0].clueText,
   correctAnswer: formattedLevels[0].text,
   levelIndex: 0,
+  animatingTransitionToggle: false,
 };
 
 export default (state = initialState, action) => {
@@ -31,6 +32,7 @@ export default (state = initialState, action) => {
         currentClue: currentLevel.clueText,
         correctAnswer: currentLevel.text,
         levelIndex,
+        animatingTransitionToggle: !state.animatingTransitionToggle,
       };
     }
 

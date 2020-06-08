@@ -10,7 +10,8 @@ import configureStore from "./store";
 // import { fetchDefinitions } from "./features/definitions/redux/definitions-actions";
 // import { fetchSynonyms } from "./features/synonyms/redux/synonyms-actions";
 import ConnectedAppScreens from "./features/screens/ConnectedAppScreens";
-import AppBackground from "./components/app-background/AppBackground";
+// import AppBackground from "./components/app-background/AppBackground2";
+import ConnectedAppBackground from "./components/app-background/ConnectedAppBackground";
 // import SoundManager from "./features/sound/SoundManager";
 // import { retrieveELOs } from "./redux/elo-tracking/elo-tracking-actions";
 // import { googlePlaySilentSignIn } from "./redux/leaderboard-services/leaderboard-services-actions";
@@ -24,16 +25,13 @@ export default function AppProvider() {
 
   useEffect(() => {
     // SplashScreen.hide();
-
     // store.dispatch(fetchRhymes());
     // store.dispatch(fetchDefinitions());
     // store.dispatch(fetchSynonyms());
     // store.dispatch(retrieveELOs());
-
     // if (Platform.OS === "android") {
     //   store.dispatch(googlePlaySilentSignIn());
     // }
-
     // BackHandler.addEventListener("hardwareBackPress", onHardwareBackPress);
   }, []);
 
@@ -56,9 +54,9 @@ export default function AppProvider() {
       <ThemeProvider theme={theme}>
         <>
           <StatusBar backgroundColor="black" barStyle="light-content" />
-          <AppBackground>
+          <ConnectedAppBackground>
             <ConnectedAppScreens />
-          </AppBackground>
+          </ConnectedAppBackground>
         </>
       </ThemeProvider>
     </Provider>
