@@ -14,6 +14,7 @@ import Animated, {
   Extrapolate,
   Value,
   Clock,
+  debug,
 } from "react-native-reanimated";
 import { Svg, Line } from "react-native-svg";
 import { cloneDeep } from "lodash";
@@ -26,6 +27,7 @@ import {
   getAbsoluteCoordinatesWithBuffer,
   valueInsideBounds,
 } from "./game-utils";
+import { SHOW_ELEMENTS_TIMEOUT } from "./game-constants";
 import CurrentLetters from "./LetterChain";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
@@ -39,7 +41,7 @@ const ContentContainer = styled(View)`
   width: 100%;
 `;
 
-const SvgContainer = styled(View)`
+const SvgContainer = styled(Animated.View)`
   top: 0;
   left: 0;
   position: absolute;
@@ -128,6 +130,9 @@ export default class CircleOfWords extends Component {
   constructor(props) {
     super(props);
     this.lineEnds = this.props.letters.map(w => ({ x: new Value(0), y: new Value(0) }));
+    this.gameElementsOpacity = new Value(0);
+    this.showGameElementsTimer = null;
+
     this.wordDimensions = this.props.letters.map((w, i) => ({
       centreX: new Value(0),
       centreY: new Value(0),
@@ -136,7 +141,7 @@ export default class CircleOfWords extends Component {
       y1Value: new Value(0),
       y2Value: new Value(0),
       index: i,
-      isConnected: new Value(0),
+      isConnected: new Value(false),
     }));
 
     this.clock = new Clock();
@@ -144,7 +149,7 @@ export default class CircleOfWords extends Component {
     this.originIndexValue = new Value(NULL_VALUE);
     this.currentIndexValue = new Value(NULL_VALUE);
     this.previousIndexValue = new Value(NULL_VALUE);
-    // this.letterChainValues = [];
+    this.letterChainValues = [];
 
     const { letterSize, letterBuffer, innerDiameter, innerRadius } = getDimensions(
       this.props.letters.length,
@@ -175,33 +180,24 @@ export default class CircleOfWords extends Component {
       },
     ]);
 
-    // this.wordBackgroundColors = this.wordDimensions.map(wd => {
-    //   return cond(wd.isConnected, Animated.color(188, 133, 163, 1), Animated.color(0, 0, 0, 0));
-    // });
-
     this.wordBackgroundColors = this.wordDimensions.map(wd => {
-      return interpolate(wd.isConnected, {
-        inputRange: [0, 1],
-        outputRange: [Animated.color(0, 0, 0, 0), Animated.color(188, 133, 163, 1)],
-        extrapolate: Extrapolate.CLAMP,
-      });
+      return cond(wd.isConnected, Animated.color(188, 133, 163, 1), Animated.color(0, 0, 0, 0));
     });
+
+    // this.wordBackgroundColors = this.wordDimensions.map(wd => {
+    //   return interpolate(wd.isConnected, {
+    //     inputRange: [0, 1],
+    //     outputRange: [Animated.color(0, 0, 0, 0), Animated.color(188, 133, 163, 1)],
+    //     extrapolate: Extrapolate.CLAMP,
+    //   });
+    // });
   }
 
-  // TODO: update dimensions when letters length changes
-  // static getDerivedStateFromProps(props, state) {
-  //   if (props.letters.length !== this.props.letters.length) {
-  //     return {
-  //     };
-  //   }
-  //   return null;
-  // }
-
   // Find the line end that matches current index value, update it's position
-  setLineEndPositionOnDrag = (translationX, translationY) => {
+  setLineEndPositionOnDrag = (indexValue, translationX, translationY) => {
     return this.lineEnds.map((lineEnd, i) => {
       return cond(
-        eq(this.currentIndexValue, new Value(i)),
+        eq(indexValue, i),
         this.updateLineEndFromOrigin(translationX, translationY, lineEnd),
       );
     });
@@ -210,7 +206,7 @@ export default class CircleOfWords extends Component {
   // Update line end position from index that matches origin value
   updateLineEndFromOrigin = (translationX, translationY, lineEnd) => {
     return this.wordDimensions.map((w, i) => {
-      return cond(eq(this.originIndexValue, new Value(i)), [
+      return cond(eq(this.originIndexValue, i), [
         set(lineEnd.x, add(translationX, this.wordDimensions[i].centreX)),
         set(lineEnd.y, add(translationY, this.wordDimensions[i].centreY)),
       ]);
@@ -220,18 +216,33 @@ export default class CircleOfWords extends Component {
   // Set line end position directly to word centre
   setLineEndPositionOnSnap = (centreX, centreY) => {
     return this.lineEnds.map((lineEnd, i) => {
-      return cond(eq(this.currentIndexValue, new Value(i)), [
+      return cond(eq(this.currentIndexValue, i), [
         set(lineEnd.x, centreX),
         set(lineEnd.y, centreY),
       ]);
     });
   };
 
-  allNodesConnected = () => {
-    return and.apply(null, this.wordDimensions.map(w => eq(w.isConnected, new Value(1))));
+  resetToPreviousLink = (translationX, translationY) => {
+    const resetCurrent = this.wordDimensions.map((wd, i) => {
+      return cond(eq(this.currentIndexValue, i), [
+        set(wd.isConnected, new Value(false)),
+        set(this.lineEnds[i].x, wd.centreX),
+        set(this.lineEnds[i].y, wd.centreY),
+      ]);
+    });
+
+    return [
+      ...resetCurrent,
+      [...this.setLineEndPositionOnDrag(this.previousIndexValue, translationX, translationY)],
+    ];
   };
 
-  anyNodeNotConnected = () => {
+  allNodesConnected = () => {
+    return and.apply(null, this.wordDimensions.map(w => w.isConnected));
+  };
+
+  someNodeNotConnected = () => {
     return not(this.allNodesConnected());
   };
 
@@ -247,7 +258,7 @@ export default class CircleOfWords extends Component {
     });
 
     const resetIsConnected = this.wordDimensions.map(wd => {
-      return set(wd.isConnected, new Value(0));
+      return set(wd.isConnected, new Value(false));
     });
 
     const resetStates = [
@@ -271,32 +282,65 @@ export default class CircleOfWords extends Component {
   };
 
   // If the drag goes into another word
-  //   Update currentIndex lineEnd to centre of that word
-  //   Update currentIndex to index of that word
-  onDragOverAnotherWord = ({ absoluteX, absoluteY, state }) => {
+  //   If it is not connected
+  //     Update currentIndex lineEnd to centre of that word
+  //     Add it to the letter chain
+  //   If it is connected AND is the previous index in the chain
+  //     Reset current index line end position
+  //     Set current index to previous
+  //     Set previous index to the one before previous (NULL if there isn't one)
+  onDragOverAnotherWord = ({ absoluteX, absoluteY, translationX, translationY, state }) => {
     const onDragOverConds = this.wordDimensions.map(wd => {
-      return cond(
-        and(
-          eq(wd.isConnected, new Value(0)),
-          valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated),
+      return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
+        call([this.previousIndexValue], this.logPreviousIndex),
+        cond(
+          not(wd.isConnected),
+          [
+            [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
+            set(this.previousIndexValue, this.currentIndexValue),
+            set(this.currentIndexValue, new Value(wd.index)),
+            set(wd.isConnected, new Value(true)),
+            call([], () => this.onAddToLetterChain(wd.index)),
+          ],
+          // When dragging over the previous index -> reset to previous state
+          cond(eq(wd.index, this.previousIndexValue), [
+            [...this.resetToPreviousLink(translationX, translationY)],
+            // Set current to previous, previous to the one before
+            debug("1, Current: ", this.currentIndexValue),
+            debug("1, Previous: ", this.previousIndexValue),
+            set(this.currentIndexValue, this.previousIndexValue),
+            set(this.previousIndexValue, this.getIndexBeforePrevious()),
+            debug("2, Current: ", this.currentIndexValue),
+            debug("2, Previous: ", this.previousIndexValue),
+            call([], this.popFromLetterChain),
+          ]),
         ),
-        [
-          [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
-          set(this.previousIndexValue, this.currentIndexValue),
-          set(this.currentIndexValue, new Value(wd.index)),
-          set(wd.isConnected, new Value(1)),
-          call([], () => this.onAddToLetterChain(wd.index)),
-        ],
-      );
+      ]);
     });
 
-    return cond(and(eq(state, State.ACTIVE), this.anyNodeNotConnected()), onDragOverConds);
+    return cond(and(eq(state, State.ACTIVE), this.someNodeNotConnected()), onDragOverConds);
+  };
+
+  getIndexBeforePrevious = () => {
+    const { letterChain } = this.state;
+
+    if (letterChain.length > 2) {
+      // console.log(">>> index before prev: ", letterChain[letterChain.length - 3]);
+      return new Value(letterChain[letterChain.length - 3]);
+    }
+
+    // console.log(">>> no index before previous");
+    return new Value(998);
+  };
+
+  logPreviousIndex = ([prevIndex]) => {
+    // console.log(">>> previous index: ", prevIndex);
   };
 
   updateLinePositionOnDrag = ({ translationX, translationY, state }) => {
     return cond(
-      and(eq(state, State.ACTIVE), this.anyNodeNotConnected()),
-      this.setLineEndPositionOnDrag(translationX, translationY),
+      and(eq(state, State.ACTIVE), this.someNodeNotConnected()),
+      this.setLineEndPositionOnDrag(this.currentIndexValue, translationX, translationY),
     );
   };
 
@@ -306,7 +350,7 @@ export default class CircleOfWords extends Component {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
         set(this.originIndexValue, new Value(wd.index)),
         set(this.currentIndexValue, new Value(wd.index)),
-        set(wd.isConnected, new Value(1)),
+        set(wd.isConnected, new Value(true)),
         call([], () => this.onInitLetterChain(wd.index)),
       ]);
     });
@@ -334,10 +378,12 @@ export default class CircleOfWords extends Component {
     });
   };
 
-  onRemoveFromLetterChain = () => {
+  popFromLetterChain = () => {
     const letterChain = [...this.state.letterChain];
+    letterChain.pop();
+
     this.setState({
-      letterChain: letterChain.pop(),
+      letterChain,
     });
   };
 
@@ -370,7 +416,7 @@ export default class CircleOfWords extends Component {
       innerRadius,
     } = this.state;
 
-    if (!allPositionsSet && wordState.every(w => w.width) && circlePositionX) {
+    if (!allPositionsSet && wordState.every(w => w.width)) {
       this.setState({ allPositionsSet: true });
 
       const clonedWordState = cloneDeep(wordState);
@@ -409,6 +455,15 @@ export default class CircleOfWords extends Component {
       l.x.setValue(this.wordDimensions[i].centreX);
       l.y.setValue(this.wordDimensions[i].centreY);
     });
+
+    // Start timer to show line svgs (reset timer if another layout update is triggered)
+    if (this.showGameElementsTimer) {
+      clearTimeout(this.showGameElementsTimer);
+    }
+
+    this.showGameElementsTimer = setTimeout(() => {
+      this.gameElementsOpacity.setValue(new Value(1));
+    }, SHOW_ELEMENTS_TIMEOUT);
   };
 
   render() {
@@ -431,7 +486,7 @@ export default class CircleOfWords extends Component {
         <CurrentLettersContainer letterBuffer={letterBuffer}>
           <CurrentLetters text={currentLetters} />
         </CurrentLettersContainer>
-        <SvgContainer>
+        <SvgContainer style={{ opacity: this.gameElementsOpacity }}>
           <Svg height={screenHeight} width={screenWidth}>
             {wordState.map((w, i) => (
               <AnimatedLine
@@ -455,7 +510,7 @@ export default class CircleOfWords extends Component {
             minDist={0}
             onGestureEvent={this.gestureHandler}
             onHandlerStateChange={this.gestureHandler}>
-            <Animated.View style={{ flex: 1 }}>
+            <Animated.View style={{ flex: 1, opacity: this.gameElementsOpacity }}>
               {wordState.map(w => {
                 const containerStyle = [{ backgroundColor: this.wordBackgroundColors[w.index] }];
 

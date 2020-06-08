@@ -1,8 +1,28 @@
 
+TODO Next:
+- Test out how multiple levels look with the image scrolling
 
+Game:
+Initial Animation (e.g. on level select)
+  (can start with random screen that just transitions to game screen for now)
+Level transition animation
+Get remove previous thing to work
+Add timing to when selection highlight is removed so that you don't see the lines
+Add some animation on incorrect answer
+Add extra hints
 
-- Get SVG line to move based on gesture event
-- Add in reanimated
+Other Screens:
+Main Menu
+Level Selection
+
+Add react navigation?
+
+If I want to add levels just from BE, will have to load image from server
+
+Stage/Level Structure:
+Each stage has 1 background image
+Each level shows one section of that background image
+On level complete, image scrolls sideways
 
 
 
