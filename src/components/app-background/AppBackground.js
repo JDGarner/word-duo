@@ -21,6 +21,7 @@ import Animated, {
   Extrapolate,
 } from "react-native-reanimated";
 import { screenWidth } from "../../utils/sizing-utils";
+import { useDidUpdateEffect } from "../../hooks/generic-hooks";
 
 const Background = styled(View)`
   flex: 1;
@@ -46,22 +47,22 @@ const StyledSafeAreaView = styled(SafeAreaView)`
   height: 100%;
 `;
 
-const runTiming = (clock, isAnimating) => {
+const runTiming = (clock, isAnimating, toValue) => {
   const state = {
     finished: new Value(0),
-    position: new Value(0),
+    position: new Value(toValue - 1),
     time: new Value(0),
     frameTime: new Value(0),
   };
 
   const config = {
-    duration: 2000,
-    toValue: 1,
-    easing: Easing.inOut(Easing.linear),
+    duration: 2500,
+    toValue,
+    easing: Easing.inOut(Easing.exp),
   };
 
   return block([
-    cond(clockRunning(clock), timing(clock, state, config), [startClock(clock)]),
+    cond(clockRunning(clock), timing(clock, state, config), startClock(clock)),
     cond(state.finished, [
       stopClock(clock),
       set(isAnimating, false),
@@ -72,12 +73,13 @@ const runTiming = (clock, isAnimating) => {
   ]);
 };
 
-const AppBackground = ({ children, animatingTransitionToggle }) => {
-  const { translateXValue, clock, isAnimating } = useMemo(
+const AppBackground = ({ children, levelIndex, numberOfLevels }) => {
+  const { clock, isAnimating, translateXValue, levelIndexValue } = useMemo(
     () => ({
-      translateXValue: new Value(0),
-      isAnimating: new Value(false),
       clock: new Clock(),
+      isAnimating: new Value(false),
+      translateXValue: new Value(0),
+      levelIndexValue: new Value(0),
     }),
     [],
   );
@@ -88,18 +90,28 @@ const AppBackground = ({ children, animatingTransitionToggle }) => {
     };
   }, []);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
+    levelIndexValue.setValue(levelIndex);
     isAnimating.setValue(true);
-  }, [animatingTransitionToggle]);
+  }, [levelIndex]);
 
-  useCode(() => block([cond(isAnimating, set(translateXValue, runTiming(clock, isAnimating)))]), [
-    translateXValue,
-    clock,
-  ]);
+  const getTimingAnimations = () => {
+    const conditions = [];
+
+    for (let i = 1; i <= numberOfLevels; i++) {
+      conditions.push(
+        cond(eq(levelIndexValue, i), set(translateXValue, runTiming(clock, isAnimating, i))),
+      );
+    }
+
+    return conditions;
+  };
+
+  useCode(() => cond(isAnimating, getTimingAnimations()), [clock]);
 
   const translateX = interpolate(translateXValue, {
-    inputRange: [0, 1],
-    outputRange: [0, -screenWidth],
+    inputRange: [0, numberOfLevels - 1],
+    outputRange: [0, -(screenWidth * numberOfLevels)],
     extrapolate: Extrapolate.CLAMP,
   });
 

@@ -11,7 +11,6 @@ const initialState = {
   correctAnswer: formattedLevels[0].text,
   levelIndex: 0,
   numberOfLevels: 4, // TODO: decide on number of levels per stage
-  animatingTransitionToggle: false,
 };
 
 export default (state = initialState, action) => {
@@ -33,7 +32,6 @@ export default (state = initialState, action) => {
         currentClue: currentLevel.clueText,
         correctAnswer: currentLevel.text,
         levelIndex,
-        animatingTransitionToggle: !state.animatingTransitionToggle,
       };
     }
 
