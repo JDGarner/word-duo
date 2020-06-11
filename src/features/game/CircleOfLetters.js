@@ -126,7 +126,7 @@ const getInitialWordState = letters => {
 
 const NULL_VALUE = 999;
 
-export default class CircleOfWords extends Component {
+export default class CircleOfLetters extends Component {
   constructor(props) {
     super(props);
     this.lineEnds = this.props.letters.map(w => ({ x: new Value(0), y: new Value(0) }));
@@ -165,6 +165,7 @@ export default class CircleOfWords extends Component {
       innerDiameter,
       innerRadius,
       letterChain: [],
+      incorrectAnimationToggle: false,
     };
 
     this.gestureHandler = Animated.event([
@@ -268,7 +269,6 @@ export default class CircleOfWords extends Component {
       set(this.originIndexValue, new Value(NULL_VALUE)),
       set(this.currentIndexValue, new Value(NULL_VALUE)),
       set(this.previousIndexValue, new Value(NULL_VALUE)),
-      call([], () => this.onResetLetterChain()),
     ];
 
     return cond(
@@ -276,7 +276,7 @@ export default class CircleOfWords extends Component {
       cond(
         this.allNodesConnected(),
         [call([], () => this.onSubmitAnswer()), [...resetStates]],
-        [...resetStates],
+        [...resetStates, call([], () => this.onSubmitIncorrectAnswer())],
       ),
     );
   };
@@ -363,7 +363,23 @@ export default class CircleOfWords extends Component {
 
     if (answer.toLowerCase() === this.props.correctAnswer.toLowerCase()) {
       this.props.onCorrectAnswer();
+      // TODO: do some correct answer animation
+      this.setState({
+        letterChain: [],
+      });
+    } else {
+      this.onSubmitIncorrectAnswer();
     }
+  };
+
+  onSubmitIncorrectAnswer = () => {
+    this.setState({
+      incorrectAnimationToggle: !this.state.incorrectAnimationToggle,
+    });
+  };
+
+  onIncorrectAnimationFinished = () => {
+    this.onResetLetterChain();
   };
 
   onInitLetterChain = index => {
@@ -476,6 +492,7 @@ export default class CircleOfWords extends Component {
       innerDiameter,
       innerRadius,
       letterChain,
+      incorrectAnimationToggle,
     } = this.state;
 
     const currentLetters = letterChain.map(index => this.props.letters[index]).join("");
@@ -484,7 +501,11 @@ export default class CircleOfWords extends Component {
       <ContentContainer>
         <GameOverlay />
         <CurrentLettersContainer letterBuffer={letterBuffer}>
-          <CurrentLetters text={currentLetters} />
+          <CurrentLetters
+            letters={currentLetters}
+            incorrectAnimationToggle={incorrectAnimationToggle}
+            onIncorrectAnimationFinished={this.onIncorrectAnimationFinished}
+          />
         </CurrentLettersContainer>
         <SvgContainer style={{ opacity: this.gameElementsOpacity }}>
           <Svg height={screenHeight} width={screenWidth}>

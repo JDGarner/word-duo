@@ -1,9 +1,8 @@
 import React from "react";
-import { View, Image } from "react-native";
+import { View } from "react-native";
 import styled from "styled-components";
 import CircleOfLetters from "./CircleOfLetters";
 import Clue from "./Clue";
-import { MediumLargerText } from "../../components/text/Text";
 
 const ContentContainer = styled(View)`
   flex: 1;

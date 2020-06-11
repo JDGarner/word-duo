@@ -5,7 +5,15 @@ const levels = [
   },
   {
     clueText: "Bigger than big",
-    text: "gigantic",
+    text: "huge",
+  },
+  {
+    clueText: "Largest in the deer family",
+    text: "moose",
+  },
+  {
+    clueText: "You're using it now",
+    text: "brain",
   },
 ];
 

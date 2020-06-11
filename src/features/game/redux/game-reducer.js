@@ -10,6 +10,7 @@ const initialState = {
   currentClue: formattedLevels[0].clueText,
   correctAnswer: formattedLevels[0].text,
   levelIndex: 0,
+  numberOfLevels: 4, // TODO: decide on number of levels per stage
   animatingTransitionToggle: false,
 };
 
