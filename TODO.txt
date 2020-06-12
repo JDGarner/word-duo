@@ -10,6 +10,7 @@ Get remove previous thing to work
 Add timing to when selection highlight is removed so that you don't see the lines
 Add some animation on incorrect answer
 Add extra hints
+Shuffle letters
 
 Other Screens:
 Main Menu

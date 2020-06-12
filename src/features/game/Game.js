@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import styled from "styled-components";
 import CircleOfLetters from "./CircleOfLetters";
 import Clue from "./Clue";
+import { CLUE_FADE_DURATION } from "./game-constants";
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -30,17 +31,31 @@ const BottomHalfArea = styled(View)`
 `;
 
 const Game = ({ letters, clueText, correctAnswer, levelIndex, onCorrectAnswer }) => {
+  const [popInClue, setPopInClue] = useState(false);
+
+  const onLayoutFinished = () => {
+    setPopInClue(true);
+  };
+
+  const handleCorrectAnswer = () => {
+    setPopInClue(false);
+    setTimeout(() => {
+      onCorrectAnswer();
+    }, CLUE_FADE_DURATION);
+  };
+
   return (
     <ContentContainer>
       <TopHalfArea>
-        <Clue text={clueText} />
+        <Clue text={clueText} popIn={popInClue} />
       </TopHalfArea>
       <BottomHalfArea>
         <CircleOfLetters
           key={levelIndex}
           letters={letters}
           correctAnswer={correctAnswer}
-          onCorrectAnswer={onCorrectAnswer}
+          onCorrectAnswer={handleCorrectAnswer}
+          onLayoutFinished={onLayoutFinished}
         />
       </BottomHalfArea>
     </ContentContainer>

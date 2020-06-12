@@ -11,10 +11,10 @@ const levels = [
     clueText: "Largest in the deer family",
     text: "moose",
   },
-  {
-    clueText: "You're using it now",
-    text: "brain",
-  },
+  // {
+  //   clueText: "You're using it now",
+  //   text: "brain",
+  // },
 ];
 
 export default levels;

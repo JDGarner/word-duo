@@ -477,8 +477,10 @@ export default class CircleOfLetters extends Component {
       clearTimeout(this.showGameElementsTimer);
     }
 
+    // If this timer fires, assume layout has finished
     this.showGameElementsTimer = setTimeout(() => {
       this.gameElementsOpacity.setValue(new Value(1));
+      this.props.onLayoutFinished();
     }, SHOW_ELEMENTS_TIMEOUT);
   };
 
