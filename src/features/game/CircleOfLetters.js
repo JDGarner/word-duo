@@ -28,7 +28,7 @@ import {
   valueInsideBounds,
 } from "./game-utils";
 import { SHOW_ELEMENTS_TIMEOUT } from "./game-constants";
-import CurrentLetters from "./LetterChain";
+import LetterChain from "./LetterChain";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
@@ -67,7 +67,7 @@ const getDimensions = numOfLetters => {
   };
 };
 
-const CurrentLettersContainer = styled(View)`
+const LetterChainContainer = styled(View)`
   margin-bottom: ${({ letterBuffer }) => letterBuffer / 2 + 20};
 `;
 
@@ -383,9 +383,7 @@ export default class CircleOfLetters extends Component {
   };
 
   onInitLetterChain = index => {
-    this.setState({
-      letterChain: [index],
-    });
+    this.setState({ letterChain: [index] });
   };
 
   onAddToLetterChain = index => {
@@ -398,15 +396,11 @@ export default class CircleOfLetters extends Component {
     const letterChain = [...this.state.letterChain];
     letterChain.pop();
 
-    this.setState({
-      letterChain,
-    });
+    this.setState({ letterChain });
   };
 
   onResetLetterChain = () => {
-    this.setState({
-      letterChain: [],
-    });
+    this.setState({ letterChain: [] });
   };
 
   onCircleLayout = event => {
@@ -502,13 +496,13 @@ export default class CircleOfLetters extends Component {
     return (
       <ContentContainer>
         <GameOverlay />
-        <CurrentLettersContainer letterBuffer={letterBuffer}>
-          <CurrentLetters
+        <LetterChainContainer letterBuffer={letterBuffer}>
+          <LetterChain
             letters={currentLetters}
             incorrectAnimationToggle={incorrectAnimationToggle}
             onIncorrectAnimationFinished={this.onIncorrectAnimationFinished}
           />
-        </CurrentLettersContainer>
+        </LetterChainContainer>
         <SvgContainer style={{ opacity: this.gameElementsOpacity }}>
           <Svg height={screenHeight} width={screenWidth}>
             {wordState.map((w, i) => (

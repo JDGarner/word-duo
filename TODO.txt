@@ -4,7 +4,7 @@ TODO Next:
 
 Game:
 Initial Animation (e.g. on level select)
-  (can start with random screen that just transitions to game screen for now)
+  - animate in the letters?
 Level transition animation
 Get remove previous thing to work
 Add timing to when selection highlight is removed so that you don't see the lines

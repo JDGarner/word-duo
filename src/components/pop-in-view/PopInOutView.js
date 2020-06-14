@@ -52,7 +52,7 @@ const PopInOutView = ({ children, popIn, duration, containerStyle, onResetAnimat
       isFadingIn: new Value(false),
       animatingValue: new Value(0),
       fadeInConfig: { fromValue: 0, toValue: 1, duration },
-      fadeOutConfig: { fromValue: 0, toValue: 1, duration },
+      fadeOutConfig: { fromValue: 1, toValue: 0, duration },
     }),
     [],
   );

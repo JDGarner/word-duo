@@ -20,6 +20,7 @@ import styled from "styled-components";
 import { MediumLargerText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import { useDidUpdateEffect } from "../../hooks/generic-hooks";
+import withAnimationReset from "../../components/animated/withAnimationReset";
 
 const LetterChainBackground = styled(Animated.View)`
   align-items: center;
@@ -36,21 +37,29 @@ const MediumLargerTextStyled = styled(MediumLargerText)`
 
 const SHAKE = 5;
 
-const LetterChain = ({ letters, incorrectAnimationToggle, onIncorrectAnimationFinished }) => {
-  if (letters && letters.length > 0) {
-    return (
-      <LetterChainText
-        text={letters}
-        toggle={incorrectAnimationToggle}
-        onAnimationFinished={onIncorrectAnimationFinished}
-      />
-    );
-  }
+const runTiming = (clock, toValue, onFinish) => {
+  const state = {
+    finished: new Value(0),
+    position: new Value(0),
+    time: new Value(0),
+    frameTime: new Value(0),
+  };
 
-  return null;
+  const config = { duration: 500, toValue, easing: Easing.linear };
+
+  return block([
+    cond(clockRunning(clock), timing(clock, state, config), startClock(clock)),
+    cond(state.finished, [stopClock(clock), call([], onFinish)]),
+    state.position,
+  ]);
 };
 
-const LetterChainText = ({ text, toggle, onAnimationFinished }) => {
+const LetterChain = ({
+  letters,
+  incorrectAnimationToggle,
+  onIncorrectAnimationFinished,
+  onResetAnimation,
+}) => {
   const { clock, isAnimating, animatingValue } = useMemo(() => {
     return {
       clock: new Clock(),
@@ -61,25 +70,13 @@ const LetterChainText = ({ text, toggle, onAnimationFinished }) => {
 
   useDidUpdateEffect(() => {
     isAnimating.setValue(true);
-  }, [toggle]);
+  }, [incorrectAnimationToggle]);
 
-  useCode(() => cond(isAnimating, set(animatingValue, runTiming(1.2))), [clock]);
+  useCode(() => cond(isAnimating, set(animatingValue, runTiming(clock, 1.2, onFinish))), [clock]);
 
-  const runTiming = toValue => {
-    const state = {
-      finished: new Value(0),
-      position: new Value(0),
-      time: new Value(0),
-      frameTime: new Value(0),
-    };
-
-    const config = { duration: 500, toValue, easing: Easing.linear };
-
-    return block([
-      cond(clockRunning(clock), timing(clock, state, config), startClock(clock)),
-      cond(state.finished, [stopClock(clock), call([], onAnimationFinished)]),
-      state.position,
-    ]);
+  const onFinish = () => {
+    onIncorrectAnimationFinished();
+    onResetAnimation();
   };
 
   const translateX = interpolate(animatingValue, {
@@ -94,11 +91,15 @@ const LetterChainText = ({ text, toggle, onAnimationFinished }) => {
     extrapolate: Extrapolate.CLAMP,
   });
 
-  return (
-    <LetterChainBackground style={{ transform: [{ translateX }], opacity }}>
-      <MediumLargerTextStyled>{capitalize(text)}</MediumLargerTextStyled>
-    </LetterChainBackground>
-  );
+  if (letters && letters.length > 0) {
+    return (
+      <LetterChainBackground style={{ transform: [{ translateX }], opacity }}>
+        <MediumLargerTextStyled>{capitalize(letters)}</MediumLargerTextStyled>
+      </LetterChainBackground>
+    );
+  }
+
+  return null;
 };
 
-export default LetterChain;
+export default withAnimationReset(LetterChain);
