@@ -291,10 +291,10 @@ export default class CircleOfLetters extends Component {
   //     Set previous index to the one before previous (NULL if there isn't one)
   onDragOverAnotherWord = ({ absoluteX, absoluteY, translationX, translationY, state }) => {
     const onDragOverConds = this.wordDimensions.map(wd => {
-      return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
-        call([this.previousIndexValue], this.logPreviousIndex),
+      return cond(
+        valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated),
         cond(
-          not(wd.isConnected),
+          and(not(wd.isConnected), this.someNodeNotConnected()),
           [
             [...this.setLineEndPositionOnSnap(wd.centreX, wd.centreY)],
             set(this.previousIndexValue, this.currentIndexValue),
@@ -306,20 +306,15 @@ export default class CircleOfLetters extends Component {
           cond(eq(wd.index, this.previousIndexValue), [
             [...this.resetToPreviousLink(translationX, translationY)],
             // Set current to previous, previous to the one before
-            debug("1, Current: ", this.currentIndexValue),
-            debug("1, Previous: ", this.previousIndexValue),
             set(this.currentIndexValue, this.previousIndexValue),
-            // set(this.previousIndexValue, this.getIndexBeforePrevious()),
             call([], this.updatePreviousIndex),
-            debug("2, Current: ", this.currentIndexValue),
-            debug("2, Previous: ", this.previousIndexValue),
             call([], this.popFromLetterChain),
           ]),
         ),
-      ]);
+      );
     });
 
-    return cond(and(eq(state, State.ACTIVE), this.someNodeNotConnected()), onDragOverConds);
+    return cond(eq(state, State.ACTIVE), onDragOverConds);
   };
 
   updatePreviousIndex = () => {
@@ -328,18 +323,11 @@ export default class CircleOfLetters extends Component {
 
   getIndexBeforePrevious = () => {
     const { letterChain } = this.state;
-
     if (letterChain.length > 2) {
-      console.log(">>> index before prev: ", letterChain[letterChain.length - 3]);
       return new Value(letterChain[letterChain.length - 3]);
     }
 
-    console.log(">>> no index before previous: ", 999);
     return new Value(NULL_VALUE);
-  };
-
-  logPreviousIndex = ([prevIndex]) => {
-    // console.log(">>> previous index: ", prevIndex);
   };
 
   updateLinePositionOnDrag = ({ translationX, translationY, state }) => {
