@@ -309,7 +309,8 @@ export default class CircleOfLetters extends Component {
             debug("1, Current: ", this.currentIndexValue),
             debug("1, Previous: ", this.previousIndexValue),
             set(this.currentIndexValue, this.previousIndexValue),
-            set(this.previousIndexValue, this.getIndexBeforePrevious()),
+            // set(this.previousIndexValue, this.getIndexBeforePrevious()),
+            call([], this.updatePreviousIndex),
             debug("2, Current: ", this.currentIndexValue),
             debug("2, Previous: ", this.previousIndexValue),
             call([], this.popFromLetterChain),
@@ -321,16 +322,20 @@ export default class CircleOfLetters extends Component {
     return cond(and(eq(state, State.ACTIVE), this.someNodeNotConnected()), onDragOverConds);
   };
 
+  updatePreviousIndex = () => {
+    this.previousIndexValue.setValue(this.getIndexBeforePrevious());
+  };
+
   getIndexBeforePrevious = () => {
     const { letterChain } = this.state;
 
     if (letterChain.length > 2) {
-      // console.log(">>> index before prev: ", letterChain[letterChain.length - 3]);
+      console.log(">>> index before prev: ", letterChain[letterChain.length - 3]);
       return new Value(letterChain[letterChain.length - 3]);
     }
 
-    // console.log(">>> no index before previous");
-    return new Value(998);
+    console.log(">>> no index before previous: ", 999);
+    return new Value(NULL_VALUE);
   };
 
   logPreviousIndex = ([prevIndex]) => {
