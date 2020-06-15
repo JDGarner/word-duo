@@ -338,7 +338,7 @@ export default class CircleOfLetters extends Component {
   };
 
   // Check what letter node the gesture is inside, set that index as origin and current
-  onDragBegin = ({ absoluteX, absoluteY, state }) => {
+  onDragBegin = ({ absoluteX, absoluteY }) => {
     const setOriginIndex = this.wordDimensions.map(wd => {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
         set(this.originIndexValue, new Value(wd.index)),
@@ -348,7 +348,7 @@ export default class CircleOfLetters extends Component {
       ]);
     });
 
-    return cond(eq(state, State.BEGAN), setOriginIndex);
+    return cond(eq(this.originIndexValue, NULL_VALUE), setOriginIndex);
   };
 
   onSubmitAnswer = () => {

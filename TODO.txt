@@ -3,6 +3,7 @@ TODO Next:
 - Test out how multiple levels look with the image scrolling
 
 Game:
+Fix android hit boxes for letters are off
 Initial Animation (e.g. on level select)
   - animate in the letters?
 Level transition animation
