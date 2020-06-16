@@ -15,6 +15,7 @@ import Animated, {
   Value,
   Clock,
   debug,
+  sub,
 } from "react-native-reanimated";
 import { Svg, Line } from "react-native-svg";
 import { cloneDeep } from "lodash";
@@ -29,6 +30,9 @@ import {
 } from "./game-utils";
 import { SHOW_ELEMENTS_TIMEOUT } from "./game-constants";
 import LetterChain from "./LetterChain";
+import { getStatusBarHeight } from "react-native-status-bar-height";
+
+const TOP_BAR_HEIGHT = getStatusBarHeight();
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
@@ -194,48 +198,38 @@ export default class CircleOfLetters extends Component {
     // });
   }
 
+  setLineEndValues = (lineEnd, xValue, yValue) => {
+    return [set(lineEnd.x, xValue), set(lineEnd.y, yValue)];
+  };
+
   // Find the line end that matches current index value, update it's position
-  setLineEndPositionOnDrag = (indexValue, translationX, translationY) => {
+  setLineEndPositionOnDrag = (indexValue, absoluteX, absoluteY) => {
     return this.lineEnds.map((lineEnd, i) => {
       return cond(
         eq(indexValue, i),
-        this.updateLineEndFromOrigin(translationX, translationY, lineEnd),
+        this.setLineEndValues(lineEnd, absoluteX, sub(absoluteY, TOP_BAR_HEIGHT)),
       );
-    });
-  };
-
-  // Update line end position from index that matches origin value
-  updateLineEndFromOrigin = (translationX, translationY, lineEnd) => {
-    return this.wordDimensions.map((w, i) => {
-      return cond(eq(this.originIndexValue, i), [
-        set(lineEnd.x, add(translationX, this.wordDimensions[i].centreX)),
-        set(lineEnd.y, add(translationY, this.wordDimensions[i].centreY)),
-      ]);
     });
   };
 
   // Set line end position directly to word centre
   setLineEndPositionOnSnap = (centreX, centreY) => {
     return this.lineEnds.map((lineEnd, i) => {
-      return cond(eq(this.currentIndexValue, i), [
-        set(lineEnd.x, centreX),
-        set(lineEnd.y, centreY),
-      ]);
+      return cond(eq(this.currentIndexValue, i), this.setLineEndValues(lineEnd, centreX, centreY));
     });
   };
 
-  resetToPreviousLink = (translationX, translationY) => {
+  resetToPreviousLink = (absoluteX, absoluteY) => {
     const resetCurrent = this.wordDimensions.map((wd, i) => {
       return cond(eq(this.currentIndexValue, i), [
         set(wd.isConnected, new Value(false)),
-        set(this.lineEnds[i].x, wd.centreX),
-        set(this.lineEnds[i].y, wd.centreY),
+        [...this.setLineEndValues(this.lineEnds[i], wd.centreX, wd.centreY)],
       ]);
     });
 
     return [
       ...resetCurrent,
-      [...this.setLineEndPositionOnDrag(this.previousIndexValue, translationX, translationY)],
+      this.setLineEndPositionOnDrag(this.previousIndexValue, absoluteX, absoluteY),
     ];
   };
 
@@ -289,7 +283,7 @@ export default class CircleOfLetters extends Component {
   //     Reset current index line end position
   //     Set current index to previous
   //     Set previous index to the one before previous (NULL if there isn't one)
-  onDragOverAnotherWord = ({ absoluteX, absoluteY, translationX, translationY, state }) => {
+  onDragOverAnotherWord = ({ absoluteX, absoluteY, state }) => {
     const onDragOverConds = this.wordDimensions.map(wd => {
       return cond(
         valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated),
@@ -304,7 +298,7 @@ export default class CircleOfLetters extends Component {
           ],
           // When dragging over the previous index -> reset to previous state
           cond(eq(wd.index, this.previousIndexValue), [
-            [...this.resetToPreviousLink(translationX, translationY)],
+            [...this.resetToPreviousLink(absoluteX, absoluteY)],
             // Set current to previous, previous to the one before
             set(this.currentIndexValue, this.previousIndexValue),
             call([], this.updatePreviousIndex),
@@ -330,10 +324,10 @@ export default class CircleOfLetters extends Component {
     return new Value(NULL_VALUE);
   };
 
-  updateLinePositionOnDrag = ({ translationX, translationY, state }) => {
+  updateLinePositionOnDrag = ({ state, absoluteX, absoluteY }) => {
     return cond(
       and(eq(state, State.ACTIVE), this.someNodeNotConnected()),
-      this.setLineEndPositionOnDrag(this.currentIndexValue, translationX, translationY),
+      this.setLineEndPositionOnDrag(this.currentIndexValue, absoluteX, absoluteY),
     );
   };
 
