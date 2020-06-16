@@ -4,6 +4,7 @@ import styled from "styled-components";
 import CircleOfLetters from "./CircleOfLetters";
 import Clue from "./Clue";
 import { CLUE_FADE_DURATION } from "./game-constants";
+import { ShuffleButton } from "../../components/button/Button";
 
 const ContentContainer = styled(View)`
   flex: 1;
@@ -30,7 +31,21 @@ const BottomHalfArea = styled(View)`
   position: absolute;
 `;
 
-const Game = ({ letters, clueText, correctAnswer, levelIndex, onCorrectAnswer }) => {
+const ShuffleButtonContainer = styled(View)`
+  width: 100%;
+  align-items: flex-start;
+  justify-content: center;
+  margin-left: 16;
+`;
+
+const Game = ({
+  letters,
+  clueText,
+  correctAnswer,
+  levelIndex,
+  onCorrectAnswer,
+  onShuffleLetters,
+}) => {
   const [popInClue, setPopInClue] = useState(false);
 
   const onLayoutFinished = () => {
@@ -51,13 +66,16 @@ const Game = ({ letters, clueText, correctAnswer, levelIndex, onCorrectAnswer })
       </TopHalfArea>
       <BottomHalfArea>
         <CircleOfLetters
-          key={levelIndex}
+          key={letters}
           letters={letters}
           correctAnswer={correctAnswer}
           onCorrectAnswer={handleCorrectAnswer}
           onLayoutFinished={onLayoutFinished}
         />
       </BottomHalfArea>
+      <ShuffleButtonContainer>
+        <ShuffleButton onPress={onShuffleLetters} />
+      </ShuffleButtonContainer>
     </ContentContainer>
   );
 };

@@ -1,4 +1,5 @@
-import { ON_CORRECT_ANSWER } from "./game-actions";
+import { shuffle } from "lodash";
+import { ON_CORRECT_ANSWER, ON_SHUFFLE_LETTERS } from "./game-actions";
 import levels from "../../../mock-data/levels";
 import { formatLevels } from "./game-redux-utils";
 
@@ -32,6 +33,13 @@ export default (state = initialState, action) => {
         currentClue: currentLevel.clueText,
         correctAnswer: currentLevel.text,
         levelIndex,
+      };
+    }
+
+    case ON_SHUFFLE_LETTERS: {
+      return {
+        ...state,
+        currentLetters: shuffle(state.currentLetters),
       };
     }
 

@@ -1,6 +1,6 @@
 import { connect } from "react-redux";
 import Game from "./Game";
-import { onCorrectAnswer } from "./redux/game-actions";
+import { onCorrectAnswer, onShuffleLetters } from "./redux/game-actions";
 
 const mapStateToProps = ({ game }) => {
   const { levelIndex, currentLetters, currentClue, correctAnswer } = game;
@@ -9,6 +9,7 @@ const mapStateToProps = ({ game }) => {
 
 const mapDispatchToProps = {
   onCorrectAnswer,
+  onShuffleLetters,
 };
 
 const ConnectedGame = connect(

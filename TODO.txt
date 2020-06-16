@@ -4,14 +4,17 @@ TODO Next:
 
 Game:
 Fix android hit boxes for letters are off
-Initial Animation (e.g. on level select)
-  - animate in the letters?
+Initial Animation (e.g. on level select):
+  - After layout has finished
+    - fade in the black circle overlay
+    - pop in the letters one by one
+    - fade in the clue
 Level transition animation
-Make undo previous logic work with an extra buffer
+Make undo previous logic work with an extra buffer?
 Add timing to when selection highlight is removed so that you don't see the lines
 Add some animation on incorrect answer
 Add extra hints
-Shuffle letters
+Shuffle button - press animation & position
 
 Other Screens:
 Main Menu
