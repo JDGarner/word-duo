@@ -27,10 +27,11 @@ import {
   getAbsoluteCoordinatesWithBuffer,
   valueInsideBounds,
 } from "./game-utils";
-import { SHOW_ELEMENTS_TIMEOUT } from "./game-constants";
+import { SHOW_ELEMENTS_TIMEOUT, LETTER_CIRCLE_BUFFER, OUTER_DIAMETER } from "./game-constants";
 import LetterChain from "./LetterChain";
 import { getStatusBarHeight } from "react-native-status-bar-height";
 import Letter from "./Letter";
+import LetterOverlay from "./LetterOverlay";
 
 const TOP_BAR_HEIGHT = getStatusBarHeight();
 
@@ -51,16 +52,13 @@ const SvgContainer = styled(Animated.View)`
   position: absolute;
 `;
 
-const OUTER_DIAMETER = screenWidth - 50;
-const LETTER_BUFFER = 30;
-
 // TODO: hit slop needs to be higher for when there are less letters
 // TODO: font size needs to be smaller for more letters
 // TODO: fix letter size formula
 const getDimensions = numOfLetters => {
   // const letterSize = (OUTER_DIAMETER / numOfLetters) * 1.4;
   const letterSize = 90;
-  const letterBuffer = letterSize + LETTER_BUFFER;
+  const letterBuffer = letterSize + LETTER_CIRCLE_BUFFER;
   const innerDiameter = OUTER_DIAMETER - letterBuffer;
 
   return {
@@ -73,14 +71,6 @@ const getDimensions = numOfLetters => {
 
 const LetterChainContainer = styled(View)`
   margin-bottom: ${({ letterBuffer }) => letterBuffer / 2 + 20};
-`;
-
-const GameOverlay = styled(View)`
-  position: absolute;
-  height: ${OUTER_DIAMETER};
-  width: ${OUTER_DIAMETER};
-  border-radius: ${OUTER_DIAMETER / 2};
-  background-color: ${colors.gameOverlayBackground};
 `;
 
 const Circle = styled(View)`
@@ -481,7 +471,7 @@ export default class CircleOfLetters extends Component {
 
     return (
       <ContentContainer>
-        <GameOverlay />
+        <LetterOverlay popInToggle={letterPopInToggle} />
         <LetterChainContainer letterBuffer={letterBuffer}>
           <LetterChain
             letters={currentLetters}

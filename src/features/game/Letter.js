@@ -20,7 +20,11 @@ import styled from "styled-components";
 import { TEXT_TOP_PADDING, LargeText } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import { useDidUpdateEffect } from "../../hooks/generic-hooks";
-import { LETTER_POP_IN_GAP, LETTER_POP_IN_DURATION } from "./game-constants";
+import {
+  LETTER_POP_IN_GAP,
+  LETTER_POP_IN_DURATION,
+  OVERLAY_FADE_IN_DURATION,
+} from "./game-constants";
 
 const LetterContainer = styled(Animated.View)`
   position: absolute;
@@ -83,7 +87,7 @@ const Letter = ({
   useDidUpdateEffect(() => {
     setTimeout(() => {
       isAnimating.setValue(true);
-    }, LETTER_POP_IN_GAP * randomDelay);
+    }, LETTER_POP_IN_GAP * randomDelay + OVERLAY_FADE_IN_DURATION);
   }, [popInToggle]);
 
   const scale = interpolate(animatingValue, {
