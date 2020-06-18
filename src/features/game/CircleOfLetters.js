@@ -18,7 +18,7 @@ import Animated, {
   sub,
 } from "react-native-reanimated";
 import { Svg, Line } from "react-native-svg";
-import { cloneDeep } from "lodash";
+import { cloneDeep, shuffle } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
 import colors from "../../theme/colors";
@@ -155,6 +155,7 @@ export default class CircleOfLetters extends Component {
       innerRadius,
       letterChain: [],
       incorrectAnimationToggle: false,
+      letterPopInToggle: false,
     };
 
     this.gestureHandler = Animated.event([
@@ -181,6 +182,8 @@ export default class CircleOfLetters extends Component {
     //     extrapolate: Extrapolate.CLAMP,
     //   });
     // });
+
+    this.randomDelays = shuffle(this.props.letters.map((l, i) => i));
   }
 
   setLineEndValues = (lineEnd, xValue, yValue) => {
@@ -380,11 +383,11 @@ export default class CircleOfLetters extends Component {
     this.setState({ circlePositionX: x, circlePositionY: y }, this.onLayoutUpdate);
   };
 
-  onLetterLayout = (event, word) => {
+  onLetterLayout = (event, ls) => {
     const { width, height } = event.nativeEvent.layout;
 
     const letterState = cloneDeep(this.state.letterState);
-    letterState[word.index] = { ...word, width, height };
+    letterState[ls.index] = { ...ls, width, height };
     this.setState({ letterState }, this.onLayoutUpdate);
   };
 
@@ -443,14 +446,21 @@ export default class CircleOfLetters extends Component {
       clearTimeout(this.showGameElementsTimer);
     }
 
-    // If this timer fires, assume layout has finished
+    // If this timer fires, assume all layouts have finished
     this.showGameElementsTimer = setTimeout(() => {
-      this.gameElementsOpacity.setValue(new Value(1));
-
-      // set some flag to start letter pop in animation
-
-      this.props.onLayoutFinished();
+      this.onAllLayoutsFinished();
     }, SHOW_ELEMENTS_TIMEOUT);
+  };
+
+  onAllLayoutsFinished = () => {
+    // Make game elements visible, pop in letters
+    this.gameElementsOpacity.setValue(new Value(1));
+
+    this.setState({
+      letterPopInToggle: !this.state.letterPopInToggle,
+    });
+
+    this.props.onLayoutFinished();
   };
 
   render() {
@@ -464,6 +474,7 @@ export default class CircleOfLetters extends Component {
       innerRadius,
       letterChain,
       incorrectAnimationToggle,
+      letterPopInToggle,
     } = this.state;
 
     const currentLetters = letterChain.map(index => this.props.letters[index]).join("");
@@ -508,6 +519,8 @@ export default class CircleOfLetters extends Component {
                   letterState={ls}
                   letterSize={letterSize}
                   backgroundColor={this.wordBackgroundColors[ls.index]}
+                  popInToggle={letterPopInToggle}
+                  randomDelay={this.randomDelays[ls.index]}
                   onLetterLayout={this.onLetterLayout}
                 />
               ))}
