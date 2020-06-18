@@ -21,7 +21,6 @@ import { Svg, Line } from "react-native-svg";
 import { cloneDeep } from "lodash";
 import styled from "styled-components";
 import { screenHeight, screenWidth } from "../../utils/sizing-utils";
-import { LargeText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
 import {
   getCircleCoordinatesForAngle,
@@ -31,6 +30,7 @@ import {
 import { SHOW_ELEMENTS_TIMEOUT } from "./game-constants";
 import LetterChain from "./LetterChain";
 import { getStatusBarHeight } from "react-native-status-bar-height";
+import Letter from "./Letter";
 
 const TOP_BAR_HEIGHT = getStatusBarHeight();
 
@@ -93,21 +93,6 @@ const Circle = styled(View)`
   margin-bottom: ${({ letterBuffer }) => letterBuffer / 2};
 `;
 
-const WordContainer = styled(Animated.View)`
-  position: absolute;
-  top: ${({ y }) => y};
-  left: ${({ x }) => x};
-  border-radius: ${({ letterSize }) => letterSize / 2};
-  width: ${({ letterSize }) => letterSize};
-  height: ${({ letterSize }) => letterSize};
-  align-items: center;
-  justify-content: center;
-`;
-
-const WordText = styled(LargeText)`
-  padding-top: ${TEXT_TOP_PADDING};
-`;
-
 const getInitialWordState = letters => {
   return letters.map((w, i) => {
     return {
@@ -160,7 +145,7 @@ export default class CircleOfLetters extends Component {
     );
 
     this.state = {
-      wordState: getInitialWordState(this.props.letters),
+      letterState: getInitialWordState(this.props.letters),
       circlePositionX: null,
       circlePositionY: null,
       allPositionsSet: false,
@@ -395,36 +380,36 @@ export default class CircleOfLetters extends Component {
     this.setState({ circlePositionX: x, circlePositionY: y }, this.onLayoutUpdate);
   };
 
-  onWordLayout = (event, word) => {
+  onLetterLayout = (event, word) => {
     const { width, height } = event.nativeEvent.layout;
 
-    const wordState = cloneDeep(this.state.wordState);
-    wordState[word.index] = { ...word, width, height };
-    this.setState({ wordState }, this.onLayoutUpdate);
+    const letterState = cloneDeep(this.state.letterState);
+    letterState[word.index] = { ...word, width, height };
+    this.setState({ letterState }, this.onLayoutUpdate);
   };
 
   // Word/Circle positions have changed, update the state about their positions
   onLayoutUpdate = () => {
     const {
       allPositionsSet,
-      wordState,
+      letterState,
       circlePositionX,
       circlePositionY,
       innerRadius,
     } = this.state;
 
-    if (!allPositionsSet && wordState.every(w => w.width)) {
+    if (!allPositionsSet && letterState.every(w => w.width)) {
       this.setState({ allPositionsSet: true });
 
-      const clonedWordState = cloneDeep(wordState);
+      const clonedLetterState = cloneDeep(letterState);
 
-      clonedWordState.forEach((w, i) => {
+      clonedLetterState.forEach((w, i) => {
         const { xCoord, yCoord } = getCircleCoordinatesForAngle(w.angle, innerRadius);
         const halfWidth = w.width / 2;
         const halfHeight = w.height / 2;
         const startingX = innerRadius - halfWidth;
         const startingY = -1 * halfHeight;
-        clonedWordState[i] = {
+        clonedLetterState[i] = {
           ...w,
           centreX: xCoord + innerRadius,
           centreY: yCoord,
@@ -432,10 +417,10 @@ export default class CircleOfLetters extends Component {
           y: startingY + yCoord,
         };
       });
-      this.setState({ wordState: clonedWordState });
+      this.setState({ letterState: clonedLetterState });
     }
 
-    wordState.forEach((w, i) => {
+    letterState.forEach((w, i) => {
       const { centreX, centreY, x1, x2, y1, y2 } = getAbsoluteCoordinatesWithBuffer(
         { x: circlePositionX, y: circlePositionY },
         w,
@@ -461,13 +446,16 @@ export default class CircleOfLetters extends Component {
     // If this timer fires, assume layout has finished
     this.showGameElementsTimer = setTimeout(() => {
       this.gameElementsOpacity.setValue(new Value(1));
+
+      // set some flag to start letter pop in animation
+
       this.props.onLayoutFinished();
     }, SHOW_ELEMENTS_TIMEOUT);
   };
 
   render() {
     const {
-      wordState,
+      letterState,
       circlePositionX,
       circlePositionY,
       letterSize,
@@ -492,7 +480,7 @@ export default class CircleOfLetters extends Component {
         </LetterChainContainer>
         <SvgContainer style={{ opacity: this.gameElementsOpacity }}>
           <Svg height={screenHeight} width={screenWidth}>
-            {wordState.map((w, i) => (
+            {letterState.map((w, i) => (
               <AnimatedLine
                 key={`${w.text}-${i}`}
                 x1={circlePositionX + w.centreX}
@@ -515,24 +503,14 @@ export default class CircleOfLetters extends Component {
             onGestureEvent={this.gestureHandler}
             onHandlerStateChange={this.gestureHandler}>
             <Animated.View style={{ flex: 1, opacity: this.gameElementsOpacity }}>
-              {wordState.map(w => {
-                const containerStyle = [{ backgroundColor: this.wordBackgroundColors[w.index] }];
-
-                return (
-                  <WordContainer
-                    onLayout={e => this.onWordLayout(e, w)}
-                    letterSize={letterSize}
-                    x={w.x || 0}
-                    y={w.y || 0}
-                    style={containerStyle}>
-                    <Animated.View>
-                      <WordText fontWeight="600" color={colors.wordColor}>
-                        {w.text}
-                      </WordText>
-                    </Animated.View>
-                  </WordContainer>
-                );
-              })}
+              {letterState.map(ls => (
+                <Letter
+                  letterState={ls}
+                  letterSize={letterSize}
+                  backgroundColor={this.wordBackgroundColors[ls.index]}
+                  onLetterLayout={this.onLetterLayout}
+                />
+              ))}
             </Animated.View>
           </PanGestureHandler>
         </Circle>
