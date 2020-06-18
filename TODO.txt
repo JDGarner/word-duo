@@ -7,7 +7,6 @@ Fix android hit boxes for letters are off
 Initial Animation (e.g. on level select):
   - After layout has finished
     - fade in the black circle overlay
-    - pop in the letters one by one
     - fade in the clue
 Level transition animation
 Make undo previous logic work with an extra buffer?

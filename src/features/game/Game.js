@@ -32,10 +32,9 @@ const BottomHalfArea = styled(View)`
 `;
 
 const ShuffleButtonContainer = styled(View)`
-  width: 100%;
-  align-items: flex-start;
-  justify-content: center;
-  margin-left: 16;
+  position: absolute;
+  bottom: 0;
+  left: 16;
 `;
 
 const Game = ({

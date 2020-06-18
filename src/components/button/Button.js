@@ -5,6 +5,7 @@ import styled from "styled-components";
 import theme from "../../theme";
 import { ICON_SIZE } from "../../utils/sizing-utils";
 import colors from "../../theme/colors";
+import { TEXT_TOP_PADDING } from "../text/Text";
 
 export const IconButton = ({ name, size = ICON_SIZE, ...buttonProps }) => {
   return (
@@ -17,9 +18,10 @@ export const IconButton = ({ name, size = ICON_SIZE, ...buttonProps }) => {
 const IconOverlay = styled(View)`
   align-items: center;
   justify-content: center;
-  height: ${ICON_SIZE + 30};
-  width: ${ICON_SIZE + 30};
+  height: ${ICON_SIZE + 25};
+  width: ${ICON_SIZE + 25};
   border-radius: ${ICON_SIZE};
+  padding-top: ${TEXT_TOP_PADDING};
   background-color: ${colors.gameOverlayBackground};
 `;
 

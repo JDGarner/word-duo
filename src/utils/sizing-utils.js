@@ -36,7 +36,7 @@ export const getSizingForOptions = (small, medium, large, larger) => {
   return OPTIONS[SCREEN_SIZE];
 };
 
-export const ICON_SIZE = getSizingForOptions(36, 36, 36, 48);
+export const ICON_SIZE = getSizingForOptions(34, 34, 34, 48);
 
 export const screenHeight = Dimensions.get("window").height;
 export const screenWidth = Dimensions.get("window").width;
