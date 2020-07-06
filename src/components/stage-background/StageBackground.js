@@ -22,9 +22,14 @@ import Animated, {
 } from "react-native-reanimated";
 import { screenWidth } from "../../utils/sizing-utils";
 import { useDidUpdateEffect } from "../../hooks/generic-hooks";
+import Screen from "../../features/screens/Screen";
 
 const Background = styled(View)`
   flex: 1;
+`;
+
+const StyledScreen = styled(Screen)`
+  position: absolute;
 `;
 
 const ImageContainer = styled(Animated.View)`
@@ -37,13 +42,6 @@ const ImageContainer = styled(Animated.View)`
 const StyledImageBackground = styled(ImageBackground)`
   flex: 1;
   width: 400%;
-  height: 100%;
-`;
-
-const StyledSafeAreaView = styled(SafeAreaView)`
-  flex: 1;
-  position: absolute;
-  width: 100%;
   height: 100%;
 `;
 
@@ -73,7 +71,7 @@ const runTiming = (clock, isAnimating, toValue) => {
   ]);
 };
 
-const AppBackground = ({ children, levelIndex, numberOfLevels }) => {
+const StageBackground = ({ children, levelIndex, numberOfLevels }) => {
   const { clock, isAnimating, translateXValue, levelIndexValue } = useMemo(
     () => ({
       clock: new Clock(),
@@ -120,9 +118,9 @@ const AppBackground = ({ children, levelIndex, numberOfLevels }) => {
       <ImageContainer style={{ transform: [{ translateX }] }}>
         <StyledImageBackground source={require("./canyon.jpg")} resizeMode="cover" />
       </ImageContainer>
-      <StyledSafeAreaView>{children}</StyledSafeAreaView>
+      <StyledScreen>{children}</StyledScreen>
     </Background>
   );
 };
 
-export default AppBackground;
+export default StageBackground;

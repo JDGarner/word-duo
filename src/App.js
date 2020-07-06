@@ -10,8 +10,7 @@ import configureStore from "./store";
 // import { fetchDefinitions } from "./features/definitions/redux/definitions-actions";
 // import { fetchSynonyms } from "./features/synonyms/redux/synonyms-actions";
 import ConnectedAppScreens from "./features/screens/ConnectedAppScreens";
-// import AppBackground from "./components/app-background/AppBackground2";
-import ConnectedAppBackground from "./components/app-background/ConnectedAppBackground";
+import ConnectedStageBackground from "./components/stage-background/ConnectedStageBackground";
 // import SoundManager from "./features/sound/SoundManager";
 // import { retrieveELOs } from "./redux/elo-tracking/elo-tracking-actions";
 // import { googlePlaySilentSignIn } from "./redux/leaderboard-services/leaderboard-services-actions";
@@ -54,9 +53,7 @@ export default function AppProvider() {
       <ThemeProvider theme={theme}>
         <>
           <StatusBar backgroundColor="black" barStyle="light-content" />
-          <ConnectedAppBackground>
-            <ConnectedAppScreens />
-          </ConnectedAppBackground>
+          <ConnectedAppScreens />
         </>
       </ThemeProvider>
     </Provider>

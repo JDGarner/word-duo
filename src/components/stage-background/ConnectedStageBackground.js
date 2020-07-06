@@ -1,11 +1,11 @@
 import { connect } from "react-redux";
-import AppBackground from "./AppBackground";
+import StageBackground from "./StageBackground";
 
 const mapStateToProps = ({ game }) => {
   const { levelIndex, numberOfLevels } = game;
   return { levelIndex, numberOfLevels };
 };
 
-const ConnectedAppBackground = connect(mapStateToProps)(AppBackground);
+const ConnectedStageBackground = connect(mapStateToProps)(StageBackground);
 
-export default ConnectedAppBackground;
+export default ConnectedStageBackground;

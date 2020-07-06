@@ -1,6 +1,6 @@
 
-TODO Next:
-- Test out how multiple levels look with the image scrolling
+Idea:
+Render two Game components, Current & Next
 
 Game:
 Fix android hit boxes for letters are off
@@ -17,7 +17,8 @@ Shuffle button - press animation & position
 
 Other Screens:
 Main Menu
-Level Selection
+Level Selection:
+  - Rounded squares for each stage with a name for each and a peice of the image in the square
 
 Add react navigation?
 

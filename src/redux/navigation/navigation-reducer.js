@@ -3,7 +3,7 @@ import { CHANGE_SCREEN, ON_NAVIGATE_BACK } from "./navigation-actions";
 
 const initialState = {
   screenStack: [SCREENS.MENU],
-  currentScreen: SCREENS.MENU,
+  currentScreen: SCREENS.STAGE_SELECTION,
 };
 
 export default (state = initialState, action) => {

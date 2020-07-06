@@ -1,12 +1,27 @@
 import React from "react";
+import { SafeAreaView } from "react-native";
 import { SCREENS } from "../../app-constants";
 import ConnectedMainMenu from "../main-menu/ConnectedMainMenu";
-import ConnectedGame from "../game/ConnectedGame";
+import ConnectedStageSelection from "../stage-selection/ConnectedStageSelection";
+import GameContainer from "../game/GameContainer";
+import Screen from "./Screen";
 
 export default function AppScreens({ currentScreen }) {
-  // if (currentScreen === SCREENS.GAME) {
-  return <ConnectedGame />;
-  // }
+  if (currentScreen === SCREENS.GAME) {
+    return <GameContainer />;
+  }
 
-  // return <ConnectedMainMenu />;
+  if (currentScreen === SCREENS.STAGE_SELECTION) {
+    return (
+      <Screen>
+        <ConnectedStageSelection />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <ConnectedMainMenu />
+    </Screen>
+  );
 }

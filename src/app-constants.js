@@ -4,6 +4,7 @@ export const ENDPOINTS = {
 
 export const SCREENS = {
   MENU: "Menu",
+  STAGE_SELECTION: "StageSelection",
   INFO: "Info",
   GAME: "Game",
 };
