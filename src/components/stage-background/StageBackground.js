@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from "react";
-import { SafeAreaView, View, ImageBackground } from "react-native";
+import { View, ImageBackground } from "react-native";
 import styled from "styled-components";
 import Animated, {
   useCode,
