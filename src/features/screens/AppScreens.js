@@ -5,6 +5,7 @@ import ConnectedMainMenu from "../main-menu/ConnectedMainMenu";
 import ConnectedStageSelection from "../stage-selection/ConnectedStageSelection";
 import GameContainer from "../game/GameContainer";
 import Screen from "./Screen";
+import colors from "../../theme/colors";
 
 export default function AppScreens({ currentScreen }) {
   if (currentScreen === SCREENS.GAME) {
@@ -13,7 +14,7 @@ export default function AppScreens({ currentScreen }) {
 
   if (currentScreen === SCREENS.STAGE_SELECTION) {
     return (
-      <Screen>
+      <Screen background={colors.gameOverlayBackground}>
         <ConnectedStageSelection />
       </Screen>
     );

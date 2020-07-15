@@ -1,16 +1,18 @@
 import React from "react";
-import { TouchableOpacity } from "react-native";
-import { SmallMediumText } from "../../components/text/Text";
 import { ScreenContainerPadded } from "../../components/containers/Containers";
 import { SCREENS } from "../../app-constants";
+import { IconButtonWithOverlay } from "../../components/button/Button";
 
 const MainMenu = ({ changeScreen }) => {
   return (
     <ScreenContainerPadded>
-      <SmallMediumText>Hello</SmallMediumText>
-      <TouchableOpacity onPress={() => changeScreen(SCREENS.GAME)}>
-        <SmallMediumText>Play</SmallMediumText>
-      </TouchableOpacity>
+      <IconButtonWithOverlay
+        name="triangle-outline"
+        size={60}
+        overlayPadding={100}
+        iconStyle={{ transform: [{ rotate: "90deg" }] }}
+        onPress={() => changeScreen(SCREENS.STAGE_SELECTION)}
+      />
     </ScreenContainerPadded>
   );
 };

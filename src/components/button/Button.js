@@ -7,10 +7,10 @@ import { ICON_SIZE } from "../../utils/sizing-utils";
 import colors from "../../theme/colors";
 import { TEXT_TOP_PADDING } from "../text/Text";
 
-export const IconButton = ({ name, size = ICON_SIZE, ...buttonProps }) => {
+export const IconButton = ({ name, size = ICON_SIZE, iconStyle = {}, ...buttonProps }) => {
   return (
     <TouchableOpacity {...buttonProps}>
-      <Icon name={name} size={size} color={theme.textColor} />
+      <Icon name={name} size={size} color={theme.textColor} style={iconStyle} />
     </TouchableOpacity>
   );
 };
@@ -18,17 +18,23 @@ export const IconButton = ({ name, size = ICON_SIZE, ...buttonProps }) => {
 const IconOverlay = styled(View)`
   align-items: center;
   justify-content: center;
-  height: ${ICON_SIZE + 25};
-  width: ${ICON_SIZE + 25};
-  border-radius: ${ICON_SIZE};
+  height: ${props => props.size + props.overlayPadding};
+  width: ${props => props.size + props.overlayPadding};
+  border-radius: ${props => props.size + props.overlayPadding};
   padding-top: ${TEXT_TOP_PADDING};
   background-color: ${colors.gameOverlayBackground};
 `;
 
-export const IconButtonWithOverlay = ({ name, size = ICON_SIZE, ...buttonProps }) => {
+export const IconButtonWithOverlay = ({
+  name,
+  size = ICON_SIZE,
+  iconStyle = {},
+  overlayPadding = 25,
+  ...buttonProps
+}) => {
   return (
-    <IconOverlay>
-      <IconButton name={name} size={size} {...buttonProps} />
+    <IconOverlay size={size} overlayPadding={overlayPadding}>
+      <IconButton name={name} size={size} iconStyle={iconStyle} {...buttonProps} />
     </IconOverlay>
   );
 };

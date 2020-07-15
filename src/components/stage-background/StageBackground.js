@@ -23,6 +23,7 @@ import Animated, {
 import { screenWidth } from "../../utils/sizing-utils";
 import { useDidUpdateEffect } from "../../hooks/generic-hooks";
 import Screen from "../../features/screens/Screen";
+import { BACKGROUND_SLIDE_DURATION } from "../../features/game/game-constants";
 
 const Background = styled(View)`
   flex: 1;
@@ -54,7 +55,7 @@ const runTiming = (clock, isAnimating, toValue) => {
   };
 
   const config = {
-    duration: 2500,
+    duration: BACKGROUND_SLIDE_DURATION,
     toValue,
     easing: Easing.inOut(Easing.exp),
   };
@@ -116,7 +117,7 @@ const StageBackground = ({ children, levelIndex, numberOfLevels }) => {
   return (
     <Background>
       <ImageContainer style={{ transform: [{ translateX }] }}>
-        <StyledImageBackground source={require("./canyon.jpg")} resizeMode="cover" />
+        <StyledImageBackground source={require("./mountain.jpg")} resizeMode="cover" />
       </ImageContainer>
       <StyledScreen>{children}</StyledScreen>
     </Background>

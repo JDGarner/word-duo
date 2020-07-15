@@ -1,6 +1,8 @@
 
 Idea:
-Render two Game components, Current & Next
+Clue could just be a synonym. Game could be called Synonyma, Synonymanica
+Animations should be faster
+Backgrounds are all minimalistic, like just different coloured fading hills, and can fit 5 words
 
 Game:
 Fix android hit boxes for letters are off
