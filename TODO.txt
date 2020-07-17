@@ -1,8 +1,13 @@
 
 Idea:
-Clue could just be a synonym. Game could be called Synonyma, Synonymanica
+Clue could just be a synonym. Game could be called Synonyma, Synonymania
+
+3 Answers per GivenWord
+~5 GivenWords per stage
+Each stage is a colour, background is faded hills of that colour
+
+
 Animations should be faster
-Backgrounds are all minimalistic, like just different coloured fading hills, and can fit 5 words
 
 Game:
 Fix android hit boxes for letters are off

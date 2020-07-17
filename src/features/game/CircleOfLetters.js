@@ -55,7 +55,7 @@ const SvgContainer = styled(Animated.View)`
 // TODO: hit slop needs to be higher for when there are less letters
 // TODO: font size needs to be smaller for more letters
 // TODO: fix letter size formula
-const getDimensions = numOfLetters => {
+const getDimensions = (numOfLetters) => {
   // const letterSize = (OUTER_DIAMETER / numOfLetters) * 1.4;
   const letterSize = 90;
   const letterBuffer = letterSize + LETTER_CIRCLE_BUFFER;
@@ -83,7 +83,7 @@ const Circle = styled(View)`
   margin-bottom: ${({ letterBuffer }) => letterBuffer / 2};
 `;
 
-const getInitialWordState = letters => {
+const getInitialWordState = (letters) => {
   return letters.map((w, i) => {
     return {
       text: w,
@@ -108,7 +108,7 @@ const NULL_VALUE = 999;
 export default class CircleOfLetters extends Component {
   constructor(props) {
     super(props);
-    this.lineEnds = this.props.letters.map(w => ({ x: new Value(0), y: new Value(0) }));
+    this.lineEnds = this.props.letters.map((w) => ({ x: new Value(0), y: new Value(0) }));
     this.gameElementsOpacity = new Value(0);
     this.showGameElementsTimer = null;
 
@@ -150,7 +150,7 @@ export default class CircleOfLetters extends Component {
 
     this.gestureHandler = Animated.event([
       {
-        nativeEvent: event => {
+        nativeEvent: (event) => {
           return block([
             this.onDragBegin(event),
             this.updateLinePositionOnDrag(event),
@@ -161,7 +161,7 @@ export default class CircleOfLetters extends Component {
       },
     ]);
 
-    this.wordBackgroundColors = this.wordDimensions.map(wd => {
+    this.wordBackgroundColors = this.wordDimensions.map((wd) => {
       return cond(wd.isConnected, Animated.color(188, 133, 163, 1), Animated.color(0, 0, 0, 0));
     });
 
@@ -212,7 +212,10 @@ export default class CircleOfLetters extends Component {
   };
 
   allNodesConnected = () => {
-    return and.apply(null, this.wordDimensions.map(w => w.isConnected));
+    return and.apply(
+      null,
+      this.wordDimensions.map((w) => w.isConnected),
+    );
   };
 
   someNodeNotConnected = () => {
@@ -230,7 +233,7 @@ export default class CircleOfLetters extends Component {
       return set(lineEnd.y, this.wordDimensions[i].centreY);
     });
 
-    const resetIsConnected = this.wordDimensions.map(wd => {
+    const resetIsConnected = this.wordDimensions.map((wd) => {
       return set(wd.isConnected, new Value(false));
     });
 
@@ -262,7 +265,7 @@ export default class CircleOfLetters extends Component {
   //     Set current index to previous
   //     Set previous index to the one before previous (NULL if there isn't one)
   onDragOverAnotherWord = ({ absoluteX, absoluteY, state }) => {
-    const onDragOverConds = this.wordDimensions.map(wd => {
+    const onDragOverConds = this.wordDimensions.map((wd) => {
       return cond(
         valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated),
         cond(
@@ -311,7 +314,7 @@ export default class CircleOfLetters extends Component {
 
   // Check what letter node the gesture is inside, set that index as origin and current
   onDragBegin = ({ absoluteX, absoluteY }) => {
-    const setOriginIndex = this.wordDimensions.map(wd => {
+    const setOriginIndex = this.wordDimensions.map((wd) => {
       return cond(valueInsideBounds({ x: absoluteX, y: absoluteY }, wd, Animated), [
         set(this.originIndexValue, new Value(wd.index)),
         set(this.currentIndexValue, new Value(wd.index)),
@@ -324,7 +327,7 @@ export default class CircleOfLetters extends Component {
   };
 
   onSubmitAnswer = () => {
-    const answer = this.state.letterChain.map(index => this.props.letters[index]).join("");
+    const answer = this.state.letterChain.map((index) => this.props.letters[index]).join("");
 
     if (answer.toLowerCase() === this.props.correctAnswer.toLowerCase()) {
       this.props.onCorrectAnswer();
@@ -347,11 +350,11 @@ export default class CircleOfLetters extends Component {
     this.onResetLetterChain();
   };
 
-  onInitLetterChain = index => {
+  onInitLetterChain = (index) => {
     this.setState({ letterChain: [index] });
   };
 
-  onAddToLetterChain = index => {
+  onAddToLetterChain = (index) => {
     this.setState({
       letterChain: [...this.state.letterChain, index],
     });
@@ -368,7 +371,7 @@ export default class CircleOfLetters extends Component {
     this.setState({ letterChain: [] });
   };
 
-  onCircleLayout = event => {
+  onCircleLayout = (event) => {
     const { x, y } = event.nativeEvent.layout;
     this.setState({ circlePositionX: x, circlePositionY: y }, this.onLayoutUpdate);
   };
@@ -391,7 +394,7 @@ export default class CircleOfLetters extends Component {
       innerRadius,
     } = this.state;
 
-    if (!allPositionsSet && letterState.every(w => w.width)) {
+    if (!allPositionsSet && letterState.every((w) => w.width)) {
       this.setState({ allPositionsSet: true });
 
       const clonedLetterState = cloneDeep(letterState);
@@ -467,7 +470,7 @@ export default class CircleOfLetters extends Component {
       letterPopInToggle,
     } = this.state;
 
-    const currentLetters = letterChain.map(index => this.props.letters[index]).join("");
+    const currentLetters = letterChain.map((index) => this.props.letters[index]).join("");
 
     return (
       <ContentContainer>
@@ -504,7 +507,7 @@ export default class CircleOfLetters extends Component {
             onGestureEvent={this.gestureHandler}
             onHandlerStateChange={this.gestureHandler}>
             <Animated.View style={{ flex: 1, opacity: this.gameElementsOpacity }}>
-              {letterState.map(ls => (
+              {letterState.map((ls) => (
                 <Letter
                   letterState={ls}
                   letterSize={letterSize}
