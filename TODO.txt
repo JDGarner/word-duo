@@ -1,12 +1,37 @@
 
+Next to do:
+Put in logic for transitioning between answer and given words
+
 Idea:
 Clue could just be a synonym. Game could be called Synonyma, Synonymania
 
-3 Answers per GivenWord
-~5 GivenWords per stage
-Each stage is a colour, background is faded hills of that colour
+-------------------------------------------------------------------
+Overview:
+Main Menu -> Play Button, Settings, Info (With Landscape background)
+
+Stage Selection:
+- Grid of squares that gradually reveals?
+- Have to show when level is complete
+
+Game:
+~3 Answers per GivenWord
+~3 GivenWords per Stage
+Each stage has a faded colour background
+
+Transition between answer words -> Letters fade out randomly and fade back in
+Transition between given words -> Landscape moves to the side
+
+Can user switch manually between words?
+-> leave this for now
+
+How to indicate if word is complete or how many words are left?
+
+After stage is complete:
+- Show stage complete feedback
+- Go to stage selection menu and reveal new levels
 
 
+------------------------------------------------------------------
 Animations should be faster
 
 Game:

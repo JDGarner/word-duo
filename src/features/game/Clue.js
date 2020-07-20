@@ -1,5 +1,6 @@
 import React from "react";
 import { View } from "react-native";
+import { capitalize } from "lodash";
 import styled from "styled-components";
 import { MediumLargerText, TEXT_TOP_PADDING } from "../../components/text/Text";
 import colors from "../../theme/colors";
@@ -30,7 +31,7 @@ const Clue = ({ text, popIn }) => {
           borderRadius: 36,
           backgroundColor: colors.gameOverlayBackground,
         }}>
-        <ClueText>{text}</ClueText>
+        <ClueText>{capitalize(text)}</ClueText>
       </PopInOutView>
     </ClueContainer>
   );

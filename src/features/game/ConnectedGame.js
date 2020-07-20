@@ -3,8 +3,8 @@ import Game from "./Game";
 import { onCorrectAnswer, onShuffleLetters } from "./redux/game-actions";
 
 const mapStateToProps = ({ game }) => {
-  const { levelIndex, currentLetters, currentClue, correctAnswer } = game;
-  return { levelIndex, letters: currentLetters, clueText: currentClue, correctAnswer };
+  const { levelIndex, wordIndex, shuffledAnswers, givenWord, correctAnswers } = game;
+  return { levelIndex, wordIndex, shuffledAnswers, givenWord, correctAnswers };
 };
 
 const mapDispatchToProps = {
@@ -12,9 +12,6 @@ const mapDispatchToProps = {
   onShuffleLetters,
 };
 
-const ConnectedGame = connect(
-  mapStateToProps,
-  mapDispatchToProps,
-)(Game);
+const ConnectedGame = connect(mapStateToProps, mapDispatchToProps)(Game);
 
 export default ConnectedGame;

@@ -12,6 +12,7 @@ const ContentContainer = styled(View)`
   align-items: center;
   justify-content: center;
   width: 100%;
+  margin-bottom: 50;
 `;
 
 const TopHalfArea = styled(View)`
@@ -32,12 +33,21 @@ const BottomHalfArea = styled(View)`
   position: absolute;
 `;
 
-const Game = ({ letters, clueText, correctAnswer, onCorrectAnswer, onShuffleLetters }) => {
+const Game = ({
+  shuffledAnswers,
+  givenWord,
+  correctAnswers,
+  wordIndex,
+  onCorrectAnswer,
+  onShuffleLetters,
+}) => {
   const [popInClue, setPopInClue] = useState(false);
   const [popInShuffle, setPopInShuffle] = useState(false);
 
   const totalInitAnimationDuration =
-    CLUE_FADE_DURATION + letters.length * LETTER_POP_IN_GAP + LETTER_POP_IN_DURATION;
+    CLUE_FADE_DURATION +
+    correctAnswers[wordIndex].length * LETTER_POP_IN_GAP +
+    LETTER_POP_IN_DURATION;
 
   const onLayoutFinished = () => {
     setPopInClue(true);
@@ -48,23 +58,27 @@ const Game = ({ letters, clueText, correctAnswer, onCorrectAnswer, onShuffleLett
   };
 
   const handleCorrectAnswer = () => {
-    setPopInShuffle(false);
-    setPopInClue(false);
-    setTimeout(() => {
+    if (wordIndex < correctAnswers.length - 1) {
       onCorrectAnswer();
-    }, CLUE_FADE_DURATION);
+    } else {
+      setPopInShuffle(false);
+      setPopInClue(false);
+      setTimeout(() => {
+        onCorrectAnswer();
+      }, CLUE_FADE_DURATION);
+    }
   };
 
   return (
     <ContentContainer>
       <TopHalfArea>
-        <Clue text={clueText} popIn={popInClue} />
+        <Clue text={givenWord} popIn={popInClue} />
       </TopHalfArea>
       <BottomHalfArea>
         <CircleOfLetters
-          key={letters}
-          letters={letters}
-          correctAnswer={correctAnswer}
+          key={shuffledAnswers[wordIndex]}
+          letters={shuffledAnswers[wordIndex]}
+          correctAnswer={correctAnswers[wordIndex]}
           onCorrectAnswer={handleCorrectAnswer}
           onLayoutFinished={onLayoutFinished}
         />

@@ -7,9 +7,10 @@ const formattedLevels = formatLevels(levels);
 
 const initialState = {
   levels: formattedLevels,
-  currentLetters: formattedLevels[0].letters,
-  currentClue: formattedLevels[0].clueText,
-  correctAnswer: formattedLevels[0].text,
+  correctAnswers: formattedLevels[0].answers,
+  shuffledAnswers: formattedLevels[0].shuffledAnswers,
+  givenWord: formattedLevels[0].givenWord,
+  wordIndex: 0,
   levelIndex: 0,
   numberOfLevels: 3, // TODO: decide on number of levels per stage
 };
@@ -19,23 +20,34 @@ export default (state = initialState, action) => {
 
   switch (type) {
     case ON_CORRECT_ANSWER: {
+      let wordIndex = state.wordIndex + 1;
+
+      if (wordIndex < state.correctAnswers.length) {
+        return {
+          ...state,
+          wordIndex,
+        };
+      }
+
       let levelIndex = state.levelIndex + 1;
       if (levelIndex >= levels.length) {
         levelIndex = 0;
       }
 
       const currentLevel = state.levels[levelIndex];
-      const currentLetters = [...currentLevel.letters];
+      const shuffledAnswers = [...currentLevel.shuffledAnswers];
 
       return {
         ...state,
-        currentLetters,
-        currentClue: currentLevel.clueText,
-        correctAnswer: currentLevel.text,
+        shuffledAnswers,
+        givenWord: currentLevel.givenWord,
+        correctAnswers: currentLevel.answers,
         levelIndex,
+        wordIndex: 0,
       };
     }
 
+    // TODO:
     case ON_SHUFFLE_LETTERS: {
       return {
         ...state,
