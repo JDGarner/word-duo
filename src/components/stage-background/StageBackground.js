@@ -117,7 +117,7 @@ const StageBackground = ({ children, levelIndex, numberOfLevels }) => {
   return (
     <Background>
       <ImageContainer style={{ transform: [{ translateX }] }}>
-        <StyledImageBackground source={require("./mountain.jpg")} resizeMode="cover" />
+        <StyledImageBackground source={require("./canyon.jpg")} resizeMode="cover" />
       </ImageContainer>
       <StyledScreen>{children}</StyledScreen>
     </Background>
